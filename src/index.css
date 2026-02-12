@@ -389,6 +389,8 @@ button.primary:hover {
   justify-content: space-between;
   /* Distribute items evenly */
   gap: 16px;
+  min-width: 0;
+  /* CRITICAL: prevents flex overflow */
 }
 
 .share-preview-img:hover {
@@ -400,6 +402,7 @@ button.primary:hover {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
 }
 
 .url-label {
@@ -419,6 +422,7 @@ button.primary:hover {
   padding: 4px;
   align-items: center;
   transition: border-color 0.2s;
+  min-width: 0;
 }
 
 .url-row:focus-within {
@@ -437,6 +441,8 @@ button.primary:hover {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
+  /* CRITICAL: allows truncation */
 }
 
 .copy-btn-icon {
