@@ -2320,6 +2320,10 @@ function App() {
 
             <h2>Share Universe</h2>
 
+            <div className="share-preview-wrapper">
+              <img src={sharingItem.thumbnail} alt="Shared Preview" className="share-preview-img" />
+            </div>
+
             {generateMathFormula(sharingItem.params)}
 
             <div className="url-row-container">
