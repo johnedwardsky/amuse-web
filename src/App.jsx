@@ -2367,7 +2367,27 @@ function App() {
               <div className="share-details-wrapper">
                 {generateMathFormula(sharingItem.params)}
 
-                {/* Direct Link section removed as per user request */}
+                <div className="url-row-container">
+                  <div className="url-label">Unique Universe Link</div>
+                  <div className="url-row">
+                    <div className="url-text-mask">
+                      {(() => {
+                        const fullUrl = generateShareLink(sharingItem.params);
+                        const parts = fullUrl.split('?p=');
+                        if (parts.length === 2) {
+                          return `${parts[0]}?p=${parts[1].substring(0, 8)}...`;
+                        }
+                        return fullUrl;
+                      })()}
+                    </div>
+                    <button className="copy-btn-icon" onClick={() => {
+                      // Copy the short link if available, otherwise the full working URL
+                      navigator.clipboard.writeText(shortLink || generateShareLink(sharingItem.params)).then(() => alert('Link copied to clipboard!'));
+                    }}>
+                      COPY
+                    </button>
+                  </div>
+                </div>
 
                 <div className="share-grid">
                   <button className="share-btn telegram" onClick={() => {

@@ -429,20 +429,20 @@ button.primary:hover {
   border-color: var(--accent-primary);
 }
 
-.url-input {
+.url-text-mask {
   background: transparent;
   border: none;
   color: var(--text-secondary);
   font-family: 'Menlo', 'Monaco', monospace;
   font-size: 11px;
   flex-grow: 1;
-  outline: none;
   padding: 8px 12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
-  /* CRITICAL: allows truncation */
+  user-select: all;
+  opacity: 0.7;
 }
 
 .copy-btn-icon {
