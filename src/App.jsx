@@ -1416,7 +1416,53 @@ function App() {
     startNewRun();
   };
 
-  // ... (updateParam, randomizer, toggleSection, saveToGallery...)
+
+  const updateParam = (key, val) => {
+    setParams(prev => ({ ...prev, [key]: val }));
+  };
+
+  const randomizer = (type) => {
+    handleClear();
+    const rand = (min, max) => Math.random() * (max - min) + min;
+    const randRPM = () => (Math.random() > 0.5 ? 1 : -1) * rand(0.01, 50);
+
+    let newParams = { ...params };
+    // Base resets
+    if (type === 'A') { // Symmetric
+      newParams.symmetry = 6;
+      newParams.penStyle = PEN_STYLES.RAINBOW;
+    } else if (type === 'B') { // Chaos
+      newParams.symmetry = 1;
+      newParams.penStyle = PEN_STYLES.FRAGMENTED;
+    }
+
+    newParams.rotorRPM = randRPM() / 4;
+    newParams.lrpm = randRPM();
+    newParams.rrpm = randRPM();
+    newParams.baseoffsx = rand(-200, 200);
+    newParams.baseoffsy = rand(-500, -100);
+    newParams.handdist = rand(50, 500);
+    newParams.larm1 = rand(20, 200);
+    newParams.rarm1 = rand(20, 200);
+    newParams.larm2 = rand(100, 400);
+    newParams.rarm2 = rand(100, 400);
+    newParams.rarmext = rand(0, 150);
+    newParams.larma = rand(0, 360);
+
+    // Occasional generative features
+    newParams.symmetry = Math.random() > 0.7 ? [2, 4, 6, 8, 12][Math.floor(Math.random() * 5)] : 1;
+    newParams.autoEvolve = Math.random() > 0.8;
+    newParams.glow = Math.random() > 0.5;
+
+    setParams(newParams);
+  };
+
+  const toggleSection = (sectionName) => {
+    setCollapsedSections(prev => ({
+      ...prev,
+      [sectionName]: !prev[sectionName]
+    }));
+  };
 
   const generateShareLink = (paramsToShare) => {
     // 1. Minify params (remove description strings or heavy objects if any) -> Current params are flat
