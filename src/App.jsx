@@ -1410,7 +1410,17 @@ function App() {
 
   const togglePlay = () => {
     if (!isRunning) {
-      startNewRun();
+      // Resume if paused, Restart if finished
+      const isFinished = params.autoStop &&
+        cycleTargetRef.current !== Infinity &&
+        cycleTargetRef.current > 0 &&
+        (Math.abs(rotationCounterRef.current) >= cycleTargetRef.current - 0.1); // Tolerance
+
+      if (isFinished) {
+        startNewRun();
+      } else {
+        setIsRunning(true);
+      }
     } else {
       setIsRunning(false);
     }
