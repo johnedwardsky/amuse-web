@@ -484,6 +484,8 @@ function App() {
     lx: null,
     ly: null,
     totalLength: 0,
+    startPoint: null, // NEW: For geometric auto-stop
+    startFrame: 0,
     debugArms: null
   });
 
@@ -987,17 +989,33 @@ function App() {
       state.current.rrot += effectiveParams.rrpm * rotStep;
 
       // --- AUTO-STOP DETECTION ---
-      if (effectiveParams.autoStop && cycleTargetRef.current !== Infinity) {
-        rotationCounterRef.current += rotStep;
-        if (rotationCounterRef.current >= cycleTargetRef.current) {
-          setIsRunning(false);
-          rotationCounterRef.current = 0;
-        }
-        // Update UI progress every 10 frames
-        if (state.current.frameCount % 10 === 0) {
-          setCycleProgress(Math.min(100, (rotationCounterRef.current / cycleTargetRef.current) * 100));
+      // 1. Geometric Stop
+      if (effectiveParams.autoStop) {
+        if (state.current.startPoint === null) {
+          // Record start point (raw coordinates)
+          state.current.startPoint = { x: fx, y: fy };
+          state.current.startFrame = frameCount.current;
+        } else if (frameCount.current > state.current.startFrame + 300) { // Safety buffer
+          // Calculate distance to start point
+          const dx = fx - state.current.startPoint.x;
+          const dy = fy - state.current.startPoint.y;
+          const distSq = dx * dx + dy * dy;
+
+          // Tolerance: 4 pixels radius (16 squared)
+          if (distSq < 16) {
+            console.log('Geometric cycle complete!');
+            setIsRunning(false);
+            state.current.startPoint = null;
+          }
         }
       }
+
+      // 2. Mathematical Cycle Stop (Old method - fallback or explicitly selected?)
+      // Keeping it simple: We replace the old logic with this new robust geometric one requested by user.
+      if (effectiveParams.autoStop && cycleTargetRef.current !== Infinity && false) { // Disabled in favor of geometric
+        // ... (Logic preserved but disabled or removed if preferred)
+      }
+
       state.current.frameCount = (state.current.frameCount || 0) + 1;
     }
 
@@ -1226,7 +1244,7 @@ function App() {
     const ctx = canvas.getContext('2d');
     ctx.fillStyle = params.theme === 'noir' ? '#000000' : '#050508';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    state.current = { crot: 0, lrot: 0, rrot: 0, lx: null, ly: null, totalLength: 0, debugArms: null };
+    state.current = { crot: 0, lrot: 0, rrot: 0, lx: null, ly: null, totalLength: 0, startPoint: null, startFrame: 0, debugArms: null };
     svgLines.current = [];
     frameCount.current = 0;
     setIsRunning(false);
@@ -1284,7 +1302,7 @@ function App() {
     }
 
     // Reset state
-    state.current = { crot: 0, lrot: 0, rrot: 0, lx: null, ly: null, totalLength: 0, debugArms: null };
+    state.current = { crot: 0, lrot: 0, rrot: 0, lx: null, ly: null, totalLength: 0, startPoint: null, startFrame: 0, debugArms: null };
     svgLines.current = [];
     frameCount.current = 0;
     evolutionOffset.current = 0;
@@ -1353,6 +1371,8 @@ function App() {
       if (params.soundEnabled && !audioCtx.current) initAudio();
       // Starting new run: calculate cycle
       rotationCounterRef.current = 0;
+      state.current.startPoint = null; // FORCE RESET
+      state.current.startFrame = 0;
       cycleTargetRef.current = calculateCycle(params);
       setCycleProgress(0);
       setIsRunning(true);
@@ -1831,7 +1851,7 @@ function App() {
               onClick={() => updateParam('autoStop', !params.autoStop)}
               style={{ width: '100%', fontSize: '11px', padding: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
             >
-              <span>{params.autoStop ? '🏁 Cycle Auto-Stop' : '🔄 Endless Rotation'}</span>
+              <span>{params.autoStop ? '🏁 Geometric Auto-Stop' : '🔄 Endless Rotation'}</span>
               <span style={{ opacity: 0.6 }}>{params.autoStop ? 'ON' : 'OFF'}</span>
             </button>
           </div>
