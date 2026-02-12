@@ -99,19 +99,19 @@ function App() {
   const [viewMode, setViewMode] = useState(false); // NEW: View-only mode for shared links
   const [sharingItem, setSharingItem] = useState(null); // NEW: Track item currently being shared
   const [collapsedSections, setCollapsedSections] = useState({
-    quickRandom: true,
+    quickRandom: false, // Expanded by default
     viewExport: true,
-    coreEngine: true,
+    coreEngine: false, // Expanded by default
     armBase: true,
     genArtEngine: true,
     viewControls: true,
     leftMechanism: true,
     rightMechanism: true,
-    penStyle: true,
+    penStyle: false, // Expanded by default
     spiroSynth: true,
     sonicEQ: true,
     genPerf: true,
-    gallery: true
+    gallery: false // Expanded by default
   });
 
   const [isInitialLoading, setIsInitialLoading] = useState(true);
