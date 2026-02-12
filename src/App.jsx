@@ -1486,6 +1486,45 @@ function App() {
     return url;
   };
 
+  const [shortLink, setShortLink] = useState('');
+  const [isShortening, setIsShortening] = useState(false);
+
+  useEffect(() => {
+    if (sharingItem) {
+      const longUrl = generateShareLink(sharingItem.params);
+      setShortLink(longUrl); // Default to long URL immediately
+
+      // Skip shortening for localhost to avoid errors (is.gd requires public URLs)
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return;
+      }
+
+      setIsShortening(true);
+
+      // Use is.gd via JSONP to avoid CORS issues
+      const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
+      window[callbackName] = (data) => {
+        delete window[callbackName];
+        document.body.removeChild(script);
+        if (data.shorturl) {
+          setShortLink(data.shorturl);
+        }
+        setIsShortening(false);
+      };
+
+      const script = document.createElement('script');
+      script.src = `https://is.gd/create.php?callback=${callbackName}&format=json&url=${encodeURIComponent(longUrl)}`;
+      script.onerror = () => {
+        setIsShortening(false);
+        // Fallback silently to long URL
+      };
+      document.body.appendChild(script);
+    } else {
+      setShortLink('');
+      setIsShortening(false);
+    }
+  }, [sharingItem]);
+
   const generateMathFormula = (p) => {
     return (
       <>
@@ -2329,18 +2368,17 @@ function App() {
                 {generateMathFormula(sharingItem.params)}
 
                 <div className="url-row-container">
-                  <div className="url-label">Direct Link</div>
+                  <div className="url-label">Direct Link {isShortening && '(Shortening...)'}</div>
                   <div className="url-row">
                     <input
                       type="text"
                       className="url-input"
-                      value={generateShareLink(sharingItem.params)}
+                      value={shortLink}
                       readOnly
                       onClick={(e) => e.target.select()}
                     />
                     <button className="copy-btn-icon" onClick={() => {
-                      const url = generateShareLink(sharingItem.params);
-                      navigator.clipboard.writeText(url).then(() => alert('Link copied to clipboard!'));
+                      navigator.clipboard.writeText(shortLink).then(() => alert('Link copied to clipboard!'));
                     }}>
                       COPY
                     </button>
@@ -2349,29 +2387,25 @@ function App() {
 
                 <div className="share-grid">
                   <button className="share-btn telegram" onClick={() => {
-                    const url = generateShareLink(sharingItem.params);
-                    window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=Check out my Amuse universe!`, '_blank');
+                    window.open(`https://t.me/share/url?url=${encodeURIComponent(shortLink)}&text=Check out my Amuse universe!`, '_blank');
                   }}>
                     <span>✈️</span> Telegram
                   </button>
 
                   <button className="share-btn vk" onClick={() => {
-                    const url = generateShareLink(sharingItem.params);
-                    window.open(`https://vk.com/share.php?url=${encodeURIComponent(url)}`, '_blank');
+                    window.open(`https://vk.com/share.php?url=${encodeURIComponent(shortLink)}`, '_blank');
                   }}>
                     <span>💙</span> VK
                   </button>
 
                   <button className="share-btn whatsapp" onClick={() => {
-                    const url = generateShareLink(sharingItem.params);
-                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent("Check out my Amuse universe! " + url)}`, '_blank');
+                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent("Check out my Amuse universe! " + shortLink)}`, '_blank');
                   }}>
                     <span>💬</span> WhatsApp
                   </button>
 
                   <button className="share-btn wechat" onClick={() => {
-                    const url = generateShareLink(sharingItem.params);
-                    navigator.clipboard.writeText(url).then(() => alert('Link for WeChat copied! Open WeChat and paste to share.'));
+                    navigator.clipboard.writeText(shortLink).then(() => alert('Link for WeChat copied! Open WeChat and paste to share.'));
                   }}>
                     <span>🟢</span> WeChat
                   </button>
