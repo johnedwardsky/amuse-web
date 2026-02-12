@@ -1453,9 +1453,8 @@ function App() {
     newParams.larma = rand(0, 360);
 
     // Occasional generative features
-    newParams.symmetry = Math.random() > 0.7 ? [2, 4, 6, 8, 12][Math.floor(Math.random() * 5)] : 1;
-    newParams.autoEvolve = Math.random() > 0.8;
-    newParams.glow = Math.random() > 0.5;
+    // newParams.autoEvolve = Math.random() > 0.8;
+    // newParams.glow = Math.random() > 0.5;
 
     setParams(newParams);
   };
