@@ -92,7 +92,7 @@ function App() {
   const [isRunning, setIsRunning] = useState(false);
   const [cycleProgress, setCycleProgress] = useState(0); // NEW: Track % of completion
 
-  const [canvasSize, setCanvasSize] = useState({ width: 2400, height: 1800 });
+  const [canvasSize] = useState({ width: 2400, height: 1800 });
   const [baseScale, setBaseScale] = useState(1);
   const [currentNote, setCurrentNote] = useState({ name: '-', octave: 0, freq: 0 });
   const [currentKey, setCurrentKey] = useState({ name: 'C', scale: [0, 2, 4, 5, 7, 9, 11], mode: 'major' });
@@ -172,7 +172,7 @@ function App() {
         if (fullCycle > 5000) return Infinity; // Too complex -> Endless
       }
       return fullCycle * Math.PI * 2; // Return in total radians for a "logical 1RPM clock"
-    } catch (e) {
+    } catch {
       return Infinity;
     }
   };
@@ -261,7 +261,7 @@ function App() {
   const masterDrive = useRef(null);
   const chordGain = useRef(null); // Master gain for all chord/pad notes
   const arpState = useRef({ index: 0, tick: 0 });
-  const modulationRef = useRef({ lastKeyName: 'C', transitionProgress: 0, borrowChance: 0.2 });
+  // modulationRef removed (unused)
 
   const SCALES = {
     chromatic: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
@@ -533,7 +533,8 @@ function App() {
       let i = 0;
       const g = () => Number(t[i++]);
 
-      const livedisplay = g() === 1;
+      // livedisplay was unused
+      g();
       const acceleration = g();
       const colormode = g();
       const cutpixels = g() === 1;
@@ -653,12 +654,10 @@ function App() {
 
       const delta = Math.asin(Math.max(-1, Math.min(1, dy / D)));
 
-      let h1a, h2a;
+      let h2a;
       if (l2 > r2) {
-        h1a = alpha + delta;
         h2a = Math.PI - ((Math.PI - alpha - gamma) - delta);
       } else {
-        h1a = (Math.PI - beta - gamma) + delta;
         h2a = Math.PI - (beta - delta);
       }
 
@@ -705,7 +704,7 @@ function App() {
       let R, G, B_val, A;
       A = 1; // Default
       switch (curParams.penStyle) {
-        case PEN_STYLES.RAINBOW:
+        case PEN_STYLES.RAINBOW: {
           const c1 = Math.sin(AM * state.current.lrot + Math.PI * 0.666) * 127 + 127;
           const c2 = Math.sin(AM * state.current.lrot + Math.PI * 0.333) * 127 + 127;
           const c3 = Math.sin(AM * state.current.lrot) * 127 + 127;
@@ -714,10 +713,12 @@ function App() {
           const c6 = Math.sin(AM * state.current.rrot) * 127 + 127;
           R = Math.floor((c1 + c4) / 2); G = Math.floor((c2 + c5) / 2); B_val = Math.floor((c3 + c6) / 2);
           A = 1; break;
-        case PEN_STYLES.BW:
+        }
+        case PEN_STYLES.BW: {
           R = G = B_val = 255;
           A = 0.3 + Math.abs(Math.sin(AM * state.current.lrot * 2)) * 0.7; break;
-        case PEN_STYLES.KALEIDOSCOPE:
+        }
+        case PEN_STYLES.KALEIDOSCOPE: {
           // Maps symmetry and rotation to a shifting spectrum
           const kh = (Math.abs(state.current.lrot + state.current.rrot) % 360) / 360;
           const kr = Math.sin(kh * Math.PI * 2) * 127 + 127;
@@ -725,28 +726,32 @@ function App() {
           const kb = Math.sin((kh + 0.66) * Math.PI * 2) * 127 + 127;
           R = Math.floor(kr); G = Math.floor(kg); B_val = Math.floor(kb);
           A = 0.8; break;
-        case PEN_STYLES.BLUE:
+        }
+        case PEN_STYLES.BLUE: {
           // Deep space blues
           const b1 = Math.sin(AM * state.current.lrot) * 50 + 50; // 0-100 (subtle red)
           R = Math.floor(b1 * 0.2);
           G = Math.floor(Math.sin(AM * state.current.rrot) * 100 + 155); // 55-255 (cyan/green)
           B_val = 255;
           A = 0.7; break;
-        case PEN_STYLES.GOLDEN:
+        }
+        case PEN_STYLES.GOLDEN: {
           // Golden gradient: Yellow (255,215,0) to Orange (255,165,0)
           const gold_mix = Math.sin(AM * (state.current.lrot + state.current.rrot)) * 0.5 + 0.5;
           R = 255;
           G = Math.floor(180 + gold_mix * 75); // 180 (Orange-ish) to 255 (Yellow)
           B_val = Math.floor(gold_mix * 50); // 0 to 50
           A = 0.8; break;
-        case PEN_STYLES.FRAGMENTED:
+        }
+        case PEN_STYLES.FRAGMENTED: {
           // Glitch / Rainbow Fragmented
           const f1 = Math.sin(AM * state.current.lrot + Math.PI * 0.666) * 127 + 127;
           const f2 = Math.sin(AM * state.current.lrot + Math.PI * 0.333) * 127 + 127;
           const f3 = Math.sin(AM * state.current.lrot) * 127 + 127;
           R = Math.floor(f1); G = Math.floor(f2); B_val = Math.floor(f3);
           A = 1; break;
-        case PEN_STYLES.HOLOGRAPHIC:
+        }
+        case PEN_STYLES.HOLOGRAPHIC: {
           // Holographic 3D Omni: Shifting cyan, magenta, and white with depth feel
           const holo_shift = (state.current.lrot + state.current.rrot) * 0.5;
           const h_r = Math.sin(AM * holo_shift) * 100 + 155;
@@ -758,7 +763,8 @@ function App() {
           // Use alpha to simulate "depth" based on line distance
           A = 0.4 + Math.abs(Math.sin(AM * state.current.lrot)) * 0.6;
           break;
-        case PEN_STYLES.SILK:
+        }
+        case PEN_STYLES.SILK: {
           // Fine Silk Holographic: Ultra-thin holographic lines for silk ribbon effect
           const silk_shift = (state.current.lrot + state.current.rrot) * 0.5;
           const s_r = Math.sin(AM * silk_shift) * 100 + 155;
@@ -770,7 +776,8 @@ function App() {
           A = 0.25; // Increased base opacity (was 0.12)
           lw = 0.4; // Base width for Silk
           break;
-        case PEN_STYLES.SILK_INVERSE:
+        }
+        case PEN_STYLES.SILK_INVERSE: {
           // Ethereal Silk: Inverted holographic palette (Warm/Gold/Fire)
           const inv_shift = (state.current.lrot + state.current.rrot) * 0.5;
           // Phase shifted colors for inversion (180 degrees)
@@ -790,7 +797,8 @@ function App() {
           A = 0.25;
           lw = 0.4;
           break;
-        default: R = 255; G = 255; B_val = 255; A = 1;
+        }
+        default: { R = 255; G = 255; B_val = 255; A = 1; }
       }
 
       // Final line width calculation with multiplier
@@ -1034,10 +1042,6 @@ function App() {
 
       // 2. Mathematical Cycle Stop (Old method - fallback or explicitly selected?)
       // Keeping it simple: We replace the old logic with this new robust geometric one requested by user.
-      if (effectiveParams.autoStop && cycleTargetRef.current !== Infinity && false) { // Disabled in favor of geometric
-        // ... (Logic preserved but disabled or removed if preferred)
-      }
-
       state.current.frameCount = (state.current.frameCount || 0) + 1;
     }
 
@@ -1228,7 +1232,7 @@ function App() {
     // Initial state reset for theme change
     state.current.lx = null;
     state.current.ly = null;
-  }, [params.theme]); // Only redo background filler on theme change, not on resize
+  }, [params.theme, canvasSize]); // Redo background on theme change or resize
 
   // Mouse move tracker with throttling for performance
   const handleMouseMove = (e) => {
@@ -1728,6 +1732,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.soundEnabled, params.synthWaveform]);
 
   return (
@@ -2226,14 +2231,7 @@ function App() {
                         }).catch(console.error);
                       } else {
                         // 3. Fallback Links for Desktop
-                        const telegram = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
-                        const whatsapp = `https://api.whatsapp.com/send?text=${encodeURIComponent(text + " " + url)}`;
-                        const vk = `https://vk.com/share.php?url=${encodeURIComponent(url)}`;
-
-                        // Open a small modal or just alert with options? 
-                        // For simplicity, let's open a new window with one of them or rely on copy.
-                        // Let's print to console or simple prompt.
-                        // Actually, let's add specific small icons/buttons below.
+                        // Links removed to fix lint errors, buttons below handle this.
                       }
                     }}>🔗 Share</button>
                     <button className="small-btn delete" onClick={() => deleteFromGallery(item.id)}>🗑</button>
