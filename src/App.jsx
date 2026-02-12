@@ -1839,7 +1839,6 @@ function App() {
             </div>
             <h1>AMUSE</h1>
             <p>Generative Art & Sound Synthesis</p>
-            <p style={{ fontSize: '14px', color: 'var(--accent-primary)', marginTop: '5px', opacity: 0.8 }}>by Van Lax</p>
             <div className="loading-bar-container">
               <div className="loading-bar-progress"></div>
             </div>
@@ -1913,7 +1912,6 @@ function App() {
         <div>
           <h1>Amuse</h1>
           <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Generative Art & Sound Synthesis</p>
-          <p style={{ fontSize: '10px', color: 'var(--accent-primary)', marginTop: '2px', opacity: 0.8 }}>by Van Lax</p>
         </div>
 
         {/* Randomizers - Top Priority */}
@@ -2369,80 +2367,22 @@ function App() {
               <div className="share-details-wrapper">
                 {generateMathFormula(sharingItem.params)}
 
-                <div className="url-row-container">
-                  <div className="url-label">Direct Link {isShortening && '(Shortening...)'}</div>
-                  <div className="url-row">
-                    <input
-                      type="text"
-                      className="url-input"
-                      value={shortLink}
-                      readOnly
-                      onClick={(e) => e.target.select()}
-                    />
-                    <button className="copy-btn-icon" onClick={() => {
-                      navigator.clipboard.writeText(shortLink).then(() => alert('Link copied to clipboard!'));
-                    }}>
-                      COPY
-                    </button>
-                  </div>
-                </div>
-
-                {/* Native Share for Mobile (Image + Text) */}
-                {/* Native Share for Mobile (Image + Text) */}
-                {navigator.canShare && navigator.canShare({ files: [new File([], 'test.png')] }) && (
-                  <button className="primary" style={{ width: '100%', marginBottom: '12px' }} onClick={async () => {
-                    if (!sharingItem.thumbnail) return;
-                    try {
-                      const res = await fetch(sharingItem.thumbnail);
-                      const blob = await res.blob();
-                      const file = new File([blob], 'amuse-universe.png', { type: 'image/png' });
-
-                      if (navigator.canShare({ files: [file] })) {
-                        await navigator.share({
-                          files: [file],
-                          title: 'Amuse Universe',
-                          text: `Check out my generative art created with Amuse! ${shortLink}`,
-                        });
-                      }
-                    } catch (err) {
-                      console.error('Share failed:', err);
-                    }
-                  }}>
-                    📤 Share Image + Link
-                  </button>
-                )}
+                {/* Direct Link section removed as per user request */}
 
                 <div className="share-grid">
-                  <button className="share-btn telegram" onClick={async () => {
-                    // Try to copy image to clipboard first (Desktop/Chrome only)
-                    try {
-                      const res = await fetch(sharingItem.thumbnail);
-                      const blob = await res.blob();
-                      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-                      alert('Image copied! Paste it in Telegram after the share dialog opens.');
-                    } catch (e) {
-                      // Ignore if not supported
-                    }
+                  <button className="share-btn telegram" onClick={() => {
                     window.open(`https://t.me/share/url?url=${encodeURIComponent(shortLink)}&text=Check out my Amuse universe!`, '_blank');
                   }}>
                     <span>✈️</span> Telegram
                   </button>
 
                   <button className="share-btn vk" onClick={() => {
-                    // VK doesn't support direct image pasting in share dialog easily, stick to link
                     window.open(`https://vk.com/share.php?url=${encodeURIComponent(shortLink)}`, '_blank');
                   }}>
                     <span>💙</span> VK
                   </button>
 
-                  <button className="share-btn whatsapp" onClick={async () => {
-                    // Try to copy image to clipboard first
-                    try {
-                      const res = await fetch(sharingItem.thumbnail);
-                      const blob = await res.blob();
-                      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-                      alert('Image copied! Paste it in WhatsApp.');
-                    } catch (e) { }
+                  <button className="share-btn whatsapp" onClick={() => {
                     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent("Check out my Amuse universe! " + shortLink)}`, '_blank');
                   }}>
                     <span>💬</span> WhatsApp
