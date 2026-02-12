@@ -1366,16 +1366,24 @@ function App() {
     console.log('App fully reset');
   };
 
+  const startNewRun = (newParams = null) => {
+    if (params.soundEnabled && !audioCtx.current) initAudio();
+
+    // Explicitly reset all execution state
+    rotationCounterRef.current = 0;
+    state.current.startPoint = null;
+    state.current.startFrame = 0;
+
+    // Recalculate cycle target based on current or new params
+    cycleTargetRef.current = calculateCycle(newParams || params);
+    setCycleProgress(0);
+
+    setIsRunning(true);
+  };
+
   const togglePlay = () => {
     if (!isRunning) {
-      if (params.soundEnabled && !audioCtx.current) initAudio();
-      // Starting new run: calculate cycle
-      rotationCounterRef.current = 0;
-      state.current.startPoint = null; // FORCE RESET
-      state.current.startFrame = 0;
-      cycleTargetRef.current = calculateCycle(params);
-      setCycleProgress(0);
-      setIsRunning(true);
+      startNewRun();
     } else {
       setIsRunning(false);
     }
@@ -1383,64 +1391,10 @@ function App() {
 
   const handleRedraw = () => {
     handleClear();
-    setIsRunning(true);
+    startNewRun();
   };
 
-  const updateParam = (key, val) => {
-    setParams(prev => ({ ...prev, [key]: val }));
-  };
-
-  const randomizer = (type) => {
-    handleClear();
-    const rand = (min, max) => Math.random() * (max - min) + min;
-    const randRPM = () => (Math.random() > 0.5 ? 1 : -1) * rand(0.01, 50);
-
-    let newParams = { ...params };
-    newParams.rotorRPM = randRPM() / 4;
-    newParams.lrpm = randRPM();
-    newParams.rrpm = randRPM();
-    newParams.baseoffsx = rand(-200, 200);
-    newParams.baseoffsy = rand(-500, -100);
-    newParams.handdist = rand(50, 500);
-    newParams.larm1 = rand(20, 200);
-    newParams.rarm1 = rand(20, 200);
-    newParams.larm2 = rand(100, 400);
-    newParams.rarm2 = rand(100, 400);
-    newParams.rarmext = rand(0, 150);
-    newParams.larma = rand(0, 360);
-
-    // Occasional generative features
-    newParams.symmetry = Math.random() > 0.7 ? [2, 4, 6, 8, 12][Math.floor(Math.random() * 5)] : 1;
-    newParams.autoEvolve = Math.random() > 0.8;
-    newParams.glow = Math.random() > 0.5;
-
-    // Randomize Key & Sequence
-    const allKeys = [
-      { name: 'C', scale: [0, 2, 4, 5, 7, 9, 11], mode: 'major' },
-      { name: 'G', scale: [0, 2, 4, 5, 7, 9, 11], mode: 'major' },
-      { name: 'D', scale: [0, 2, 4, 5, 7, 9, 11], mode: 'major' },
-      { name: 'F', scale: [0, 2, 4, 5, 7, 9, 11], mode: 'major' },
-      { name: 'A', scale: [0, 2, 3, 5, 7, 8, 10], mode: 'minor' },
-      { name: 'E', scale: [0, 2, 3, 5, 7, 8, 10], mode: 'minor' },
-      { name: 'D', scale: [0, 2, 3, 5, 7, 8, 10], mode: 'minor' },
-    ];
-    const pickedKey = allKeys[Math.floor(Math.random() * allKeys.length)];
-    setCurrentKey(pickedKey);
-
-    // Pick a random starting note
-    const chromaticNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-    const startNote = chromaticNotes[pickedKey.scale[Math.floor(Math.random() * pickedKey.scale.length)]];
-    setCurrentNote({ name: startNote, octave: 3, freq: 0 });
-
-    setParams(newParams);
-  };
-
-  const toggleSection = (sectionName) => {
-    setCollapsedSections(prev => ({
-      ...prev,
-      [sectionName]: !prev[sectionName]
-    }));
-  };
+  // ... (updateParam, randomizer, toggleSection, saveToGallery...)
 
   const saveToGallery = () => {
     const canvas = canvasRef.current;
@@ -1456,7 +1410,7 @@ function App() {
 
     const newItem = {
       id: Date.now(),
-      params: { ...params },
+      params: { ...params }, // Save current params state
       thumbnail,
       date: new Date().toLocaleString()
     };
@@ -1466,8 +1420,18 @@ function App() {
 
   const loadFromGallery = (item) => {
     handleClear();
-    setParams({ ...item.params });
-    setIsRunning(true);
+
+    // Robust merge: ensure we don't lose new keys if loading old preset
+    const mergedParams = {
+      ...params, // Default/current structure
+      ...item.params // Overwrite with saved values
+    };
+
+    setParams(mergedParams);
+
+    // Important: Force a clean start with the NEW merged params
+    // We pass mergedParams because 'params' state won't update until next render
+    startNewRun(mergedParams);
   };
 
   const deleteFromGallery = (id) => {
