@@ -2387,6 +2387,32 @@ function App() {
                   </div>
                 </div>
 
+                {/* Native Share for Mobile (Image + Text) */}
+                {navigator.canShare && navigator.canShare({ files: [new File([], 'test.png')] }) && (
+                  <button className="primary" style={{ width: '100%', marginBottom: '12px' }} onClick={async () => {
+                    if (!sharingItem.thumbnail) return;
+                    try {
+                      // Convert base64 thumbnail to Blob
+                      const res = await fetch(sharingItem.thumbnail);
+                      const blob = await res.blob();
+                      const file = new File([blob], 'amuse-universe.png', { type: 'image/png' });
+
+                      if (navigator.canShare({ files: [file] })) {
+                        await navigator.share({
+                          files: [file],
+                          title: 'Amuse Universe',
+                          text: `Check out my generative art created with Amuse! ${shortLink}`,
+                          // url: shortLink // Some apps ignore text if URL is present with file, so we append URL to text instead
+                        });
+                      }
+                    } catch (err) {
+                      console.error('Share failed:', err);
+                    }
+                  }}>
+                    📤 Share Image + Link
+                  </button>
+                )}
+
                 <div className="share-grid">
                   <button className="share-btn telegram" onClick={() => {
                     window.open(`https://t.me/share/url?url=${encodeURIComponent(shortLink)}&text=Check out my Amuse universe!`, '_blank');
