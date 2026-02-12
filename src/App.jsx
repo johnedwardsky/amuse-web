@@ -1203,7 +1203,7 @@ function App() {
       if (!containerRef.current) return;
       const { width, height } = containerRef.current.getBoundingClientRect();
       // Calculate scale to fit 2400x1800 into current container
-      const s = Math.min(width / 2400, height / 1800) * 0.95; // 95% to leave tiny margin
+      const s = Math.min(width / 2400, height / 1800) * 0.98; // 98% (almost full screen)
       setBaseScale(s);
     };
 
