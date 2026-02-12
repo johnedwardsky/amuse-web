@@ -1479,6 +1479,43 @@ function App() {
     return url;
   };
 
+  const generateMathFormula = (p) => {
+    return (
+      <div className="formula-container">
+        <span className="math-symbol">Ψ</span>
+        <span className="math-op">=</span>
+        <span className="math-val">Sym</span>
+        <span className="math-symbol">(</span>
+        <span className="math-val">{p.symmetry}</span>
+        <span className="math-symbol">)</span>
+        <span className="math-op">·</span>
+        <span className="math-symbol">∫</span>
+        <span className="math-symbol">[</span>
+        <span className="math-val">L</span>
+        <span className="math-symbol">(</span>
+        <span className="math-val">{p.larm1}</span>
+        <span className="math-symbol">,</span>
+        <span className="math-val">{p.larm2}</span>
+        <span className="math-symbol">)</span>
+        <span className="math-symbol">^</span>
+        <span className="math-val">{p.lrpm}</span>
+        <span className="math-symbol">ω</span>
+        <span className="math-op">+</span>
+        <span className="math-val">R</span>
+        <span className="math-symbol">(</span>
+        <span className="math-val">{p.rarm1}</span>
+        <span className="math-symbol">,</span>
+        <span className="math-val">{p.rarm2}</span>
+        <span className="math-symbol">)</span>
+        <span className="math-symbol">^</span>
+        <span className="math-val">{p.rrpm}</span>
+        <span className="math-symbol">ω</span>
+        <span className="math-symbol">]</span>
+        <span className="math-symbol">dt</span>
+      </div>
+    );
+  };
+
   const handleCreateNew = () => {
     setViewMode(false);
     handleReset();
@@ -2265,6 +2302,8 @@ function App() {
             <button className="modal-close-btn" onClick={() => setSharingItem(null)}>×</button>
 
             <h2>Share Universe</h2>
+
+            {generateMathFormula(sharingItem.params)}
 
             <div className="url-row-container">
               <div className="url-label">Direct Link</div>
