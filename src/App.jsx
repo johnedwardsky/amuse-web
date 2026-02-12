@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
+import LZString from 'lz-string';
 
 const PEN_STYLES = {
   RAINBOW: 0,
@@ -95,6 +96,7 @@ function App() {
   const [baseScale, setBaseScale] = useState(1);
   const [currentNote, setCurrentNote] = useState({ name: '-', octave: 0, freq: 0 });
   const [currentKey, setCurrentKey] = useState({ name: 'C', scale: [0, 2, 4, 5, 7, 9, 11], mode: 'major' });
+  const [viewMode, setViewMode] = useState(false); // NEW: View-only mode for shared links
   const [collapsedSections, setCollapsedSections] = useState({
     quickRandom: true,
     viewExport: true,
@@ -500,7 +502,27 @@ function App() {
   useEffect(() => { mousePosRef.current = mousePos; }, [mousePos]);
   useEffect(() => { canvasSizeRef.current = canvasSize; }, [canvasSize]);
 
-  // Hash parsing logic
+  // Share Link Parsing
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const encodedParams = searchParams.get('p');
+    if (encodedParams) {
+      try {
+        const decompressed = LZString.decompressFromEncodedURIComponent(encodedParams);
+        if (decompressed) {
+          const sharedParams = JSON.parse(decompressed);
+          setParams(prev => ({ ...prev, ...sharedParams }));
+          setViewMode(true);
+          // Auto-start will happen via startNewRun in next effect or manual timeout
+          setTimeout(() => startNewRun({ ...params, ...sharedParams }), 500);
+        }
+      } catch (e) {
+        console.error("Failed to parse shared link", e);
+      }
+    }
+  }, []);
+
+  // Hash parsing logic (Legacy)
   useEffect(() => {
     const parseHash = () => {
       const h = window.location.hash;
@@ -1396,6 +1418,23 @@ function App() {
 
   // ... (updateParam, randomizer, toggleSection, saveToGallery...)
 
+  const generateShareLink = (paramsToShare) => {
+    // 1. Minify params (remove description strings or heavy objects if any) -> Current params are flat
+    const jsonString = JSON.stringify(paramsToShare);
+    // 2. Compress/Encode
+    const compressed = LZString.compressToEncodedURIComponent(jsonString);
+    // 3. Construct URL
+    const url = `${window.location.origin}${window.location.pathname}?p=${compressed}`;
+    return url;
+  };
+
+  const handleCreateNew = () => {
+    setViewMode(false);
+    handleReset();
+    // Clear URL params without reload
+    window.history.pushState({}, document.title, window.location.pathname);
+  };
+
   const saveToGallery = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -1724,7 +1763,7 @@ function App() {
         )}
       </div>
 
-      <div className="controls-panel">
+      <div className="controls-panel" style={viewMode ? { display: 'none' } : {}}>
         <div>
           <h1>Amuse</h1>
           <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Generative Art & Sound Synthesis</p>
@@ -2103,33 +2142,104 @@ function App() {
         </div>
 
         {/* GALLERY */}
-        <div className={`section-title ${collapsedSections['gallery'] ? 'collapsed' : ''}`} onClick={() => toggleSection('gallery')}>
-          Gallery & Presets
-        </div>
-        <div className={`section-content ${collapsedSections['gallery'] ? 'collapsed' : ''}`}>
-          <div className="button-group grid-2" style={{ marginBottom: '15px' }}>
-            <button className="primary" onClick={saveToGallery}>⭐ Save Preset</button>
-            <button onClick={refreshGallery} style={{ fontSize: '11px' }}>🔄 Reload</button>
+        {!viewMode && (
+          <div className={`section-title ${collapsedSections['gallery'] ? 'collapsed' : ''}`} onClick={() => toggleSection('gallery')}>
+            Gallery & Presets
           </div>
+        )}
+        {!viewMode && (
+          <div className={`section-content ${collapsedSections['gallery'] ? 'collapsed' : ''}`}>
+            <div className="button-group grid-2" style={{ marginBottom: '15px' }}>
+              <button className="primary" onClick={saveToGallery}>⭐ Save Preset</button>
+              <button onClick={refreshGallery} style={{ fontSize: '11px' }}>🔄 Reload</button>
+            </div>
 
-          <div className="gallery-grid">
-            {gallery.map(item => (
-              <div key={item.id} className="gallery-item">
-                <img src={item.thumbnail} alt="Saved spirograph" onClick={() => loadFromGallery(item)} />
-                <div className="gallery-item-actions">
-                  <button className="small-btn" onClick={() => loadFromGallery(item)}>▶ Load</button>
-                  <button className="small-btn delete" onClick={() => deleteFromGallery(item.id)}>🗑</button>
+            <div className="gallery-grid">
+              {gallery.map(item => (
+                <div key={item.id} className="gallery-item">
+                  <img src={item.thumbnail} alt="Saved spirograph" onClick={() => loadFromGallery(item)} />
+                  <div className="gallery-item-actions">
+                    <button className="small-btn" onClick={() => loadFromGallery(item)}>▶ Load</button>
+                    <button className="small-btn" onClick={() => {
+                      const url = generateShareLink(item.params);
+                      const text = "Check out my Amuse universe!";
+
+                      // Simple Share Actions
+                      // 1. Copy Link (Default/Universal)
+                      navigator.clipboard.writeText(url).then(() => alert('Link copied to clipboard!'));
+
+                      // 2. Web Share API (Primary for Mobile "Image in Message") if available
+                      if (navigator.share) {
+                        // Converting DataURL to Blob for sharing is complex but ideal. 
+                        // For now we share text+url which is widely supported.
+                        // Ideally we would fetch(item.thumbnail).then(res => res.blob())...
+                        navigator.share({
+                          title: 'Amuse Universe',
+                          text: text,
+                          url: url
+                        }).catch(console.error);
+                      } else {
+                        // 3. Fallback Links for Desktop
+                        const telegram = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+                        const whatsapp = `https://api.whatsapp.com/send?text=${encodeURIComponent(text + " " + url)}`;
+                        const vk = `https://vk.com/share.php?url=${encodeURIComponent(url)}`;
+
+                        // Open a small modal or just alert with options? 
+                        // For simplicity, let's open a new window with one of them or rely on copy.
+                        // Let's print to console or simple prompt.
+                        // Actually, let's add specific small icons/buttons below.
+                      }
+                    }}>🔗 Share</button>
+                    <button className="small-btn delete" onClick={() => deleteFromGallery(item.id)}>🗑</button>
+                  </div>
+                  {/* Minimalist Share Icons Row */}
+                  <div style={{ display: 'flex', gap: '5px', marginTop: '5px', justifyContent: 'center' }}>
+                    <button style={{ padding: '2px 5px', fontSize: '10px' }} onClick={() => window.open(`https://t.me/share/url?url=${encodeURIComponent(generateShareLink(item.params))}&text=Amuse Art`, '_blank')}>TG</button>
+                    <button style={{ padding: '2px 5px', fontSize: '10px' }} onClick={() => window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent("Check this out: " + generateShareLink(item.params))}`, '_blank')}>WA</button>
+                    <button style={{ padding: '2px 5px', fontSize: '10px' }} onClick={() => window.open(`https://vk.com/share.php?url=${encodeURIComponent(generateShareLink(item.params))}`, '_blank')}>VK</button>
+                  </div>
                 </div>
-              </div>
-            ))}
-            {gallery.length === 0 && (
-              <p style={{ gridColumn: 'span 2', textAlign: 'center', fontSize: '11px', color: 'var(--text-tertiary)' }}>
-                Your saved configurations will appear here.
-              </p>
-            )}
+              ))}
+              {gallery.length === 0 && (
+                <p style={{ gridColumn: 'span 2', textAlign: 'center', fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                  Your saved configurations will appear here.
+                </p>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
+
+      {/* VIEW MODE OVERLAY */}
+      {viewMode && (
+        <div style={{
+          position: 'fixed',
+          bottom: '40px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 1000,
+          textAlign: 'center',
+          width: '100%'
+        }}>
+          <button
+            className="primary"
+            style={{
+              padding: '15px 30px',
+              fontSize: '18px',
+              fontFamily: "'Orbitron', sans-serif",
+              background: 'rgba(0,0,0,0.8)',
+              color: '#00f0ff',
+              boxShadow: '0 0 20px rgba(0,240,255,0.4)',
+              border: '1px solid rgba(0,240,255,0.5)',
+              borderRadius: '30px',
+              cursor: 'pointer'
+            }}
+            onClick={handleCreateNew}
+          >
+            ✨ Хочу создать свою вселенную
+          </button>
+        </div>
+      )}
     </div>
   );
 }
