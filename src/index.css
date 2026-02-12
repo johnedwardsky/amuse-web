@@ -332,42 +332,63 @@ button.primary:hover {
   width: 100%;
 }
 
+@keyframes pulse-slow {
+  0% {
+    transform: scale(1);
+    filter: brightness(1) drop-shadow(0 0 5px rgba(0, 242, 255, 0.2));
+  }
+
+  50% {
+    transform: scale(1.02);
+    filter: brightness(1.2) drop-shadow(0 0 20px var(--accent-primary));
+  }
+
+  100% {
+    transform: scale(1);
+    filter: brightness(1) drop-shadow(0 0 5px rgba(0, 242, 255, 0.2));
+  }
+}
+
 .share-content-wrapper {
   display: flex;
-  gap: 24px;
+  gap: 32px;
+  /* Increased gap */
   align-items: stretch;
-  /* Match height */
 }
 
 /* Left column */
 .share-preview-wrapper {
-  flex: 0 0 45%;
-  /* Takes about 45% width */
+  flex: 0 0 50%;
+  /* Equal 50/50 split */
   display: flex;
   justify-content: center;
   align-items: center;
   position: relative;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .share-preview-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  /* Fill container */
+  object-fit: contain;
+  /* Don't crop, show full image */
+  animation: pulse-slow 6s infinite ease-in-out;
+  /* Breathing animation */
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 0 20px rgba(0, 242, 255, 0.3);
-  transition: transform 0.3s ease;
-  min-height: 250px;
-  /* Minimum height for better visibility */
 }
 
 /* Right column container */
 .share-details-wrapper {
   flex: 1;
+  /* Take remaining space */
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
+  /* Distribute items evenly */
   gap: 16px;
-  justify-content: center;
 }
 
 .share-preview-img:hover {
