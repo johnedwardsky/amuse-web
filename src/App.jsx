@@ -1481,38 +1481,48 @@ function App() {
 
   const generateMathFormula = (p) => {
     return (
-      <div className="formula-container">
-        <span className="math-symbol">Ψ</span>
-        <span className="math-op">=</span>
-        <span className="math-val">Sym</span>
-        <span className="math-symbol">(</span>
-        <span className="math-val">{p.symmetry}</span>
-        <span className="math-symbol">)</span>
-        <span className="math-op">·</span>
-        <span className="math-symbol">∫</span>
-        <span className="math-symbol">[</span>
-        <span className="math-val">L</span>
-        <span className="math-symbol">(</span>
-        <span className="math-val">{p.larm1}</span>
-        <span className="math-symbol">,</span>
-        <span className="math-val">{p.larm2}</span>
-        <span className="math-symbol">)</span>
-        <span className="math-symbol">^</span>
-        <span className="math-val">{p.lrpm}</span>
-        <span className="math-symbol">ω</span>
-        <span className="math-op">+</span>
-        <span className="math-val">R</span>
-        <span className="math-symbol">(</span>
-        <span className="math-val">{p.rarm1}</span>
-        <span className="math-symbol">,</span>
-        <span className="math-val">{p.rarm2}</span>
-        <span className="math-symbol">)</span>
-        <span className="math-symbol">^</span>
-        <span className="math-val">{p.rrpm}</span>
-        <span className="math-symbol">ω</span>
-        <span className="math-symbol">]</span>
-        <span className="math-symbol">dt</span>
-      </div>
+      <>
+        <div className="formula-container">
+          <span className="math-symbol">Ψ</span>
+          <span className="math-op">=</span>
+          <span className="math-val">Sym</span>
+          <span className="math-symbol">(</span>
+          <span className="math-val">S</span>
+          <span className="math-symbol">)</span>
+          <span className="math-op">·</span>
+          <span className="math-symbol">∫</span>
+          <span className="math-symbol">(</span>
+          <span className="math-val">ℒ</span>
+          <span className="math-symbol">(</span>
+          <span className="math-val">ω₁</span>
+          <span className="math-symbol">)</span>
+          <span className="math-op">+</span>
+          <span className="math-val">ℛ</span>
+          <span className="math-symbol">(</span>
+          <span className="math-val">ω₂</span>
+          <span className="math-symbol">)</span>
+          <span className="math-symbol">)</span>
+          <span className="math-symbol">dt</span>
+        </div>
+        <div className="formula-data">
+          <div className="data-item">
+            <span className="data-label">SYMMETRY (S)</span>
+            <span className="data-value">{p.symmetry}x</span>
+          </div>
+          <div className="data-item">
+            <span className="data-label">LEFT RPM (ω₁)</span>
+            <span className="data-value">{p.lrpm.toFixed(3)}</span>
+          </div>
+          <div className="data-item">
+            <span className="data-label">RIGHT RPM (ω₂)</span>
+            <span className="data-value">{p.rrpm.toFixed(3)}</span>
+          </div>
+          <div className="data-item">
+            <span className="data-label">ZOOM</span>
+            <span className="data-value">{p.zoom.toFixed(1)}x</span>
+          </div>
+        </div>
+      </>
     );
   };
 

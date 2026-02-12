@@ -113,47 +113,75 @@ label {
 .formula-container {
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 30px 15px 25px 15px;
-  /* More space */
-  margin-bottom: 5px;
+  border-radius: 12px 12px 0 0;
+  /* Linked to data box below */
+  padding: 35px 20px 20px 20px;
   text-align: center;
   font-family: 'Times New Roman', Times, serif;
   font-style: italic;
   color: var(--accent-primary);
-  font-size: 22px;
-  /* Larger font */
+  font-size: 24px;
   position: relative;
   overflow: hidden;
   box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
+  border-bottom: none;
 }
 
 .formula-container::before {
   content: "GENESIS EQUATION";
   position: absolute;
-  top: 6px;
+  top: 8px;
   left: 50%;
   transform: translateX(-50%);
   font-family: 'Outfit', sans-serif;
   font-style: normal;
-  font-size: 9px;
+  font-size: 7px;
+  /* Smaller label */
   opacity: 0.3;
-  letter-spacing: 3px;
+  letter-spacing: 4px;
   color: var(--text-secondary);
 }
 
-.formula-legend {
-  text-align: center;
+.formula-data {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 0 0 12px 12px;
+  padding: 12px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  font-family: 'Menlo', 'Monaco', monospace;
   font-size: 10px;
   color: var(--text-secondary);
-  opacity: 0.7;
-  margin-bottom: 20px;
-  font-family: 'Outfit', sans-serif;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.data-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.data-label {
+  opacity: 0.5;
+  font-size: 8px;
+}
+
+.data-value {
+  color: var(--accent-secondary);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.formula-legend {
+  display: none;
+  /* Removed in favor of data box */
 }
 
 .math-symbol {
