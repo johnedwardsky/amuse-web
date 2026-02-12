@@ -82,6 +82,7 @@ h1 {
   font-size: 24px;
   font-weight: 800;
   background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   margin-bottom: 8px;
@@ -110,6 +111,7 @@ label {
 }
 
 input[type="range"] {
+  appearance: none;
   -webkit-appearance: none;
   width: 100%;
   height: 4px;
@@ -183,4 +185,207 @@ button.primary:hover {
   font-size: 12px;
   color: var(--text-secondary);
   pointer-events: none;
+}
+
+/* Share Modal Styles */
+.share-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.share-modal {
+  background: rgba(20, 20, 30, 0.7);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 50px rgba(0, 242, 255, 0.1);
+  border-radius: 24px;
+  padding: 32px;
+  width: 90%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  position: relative;
+}
+
+.share-modal h2 {
+  text-align: center;
+  margin: 0;
+  font-size: 24px;
+  background: linear-gradient(to right, #ffffff, #b0b0cc);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.5px;
+}
+
+.url-row-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.url-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-left: 4px;
+}
+
+.url-row {
+  display: flex;
+  gap: 0;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 4px;
+  align-items: center;
+  transition: border-color 0.2s;
+}
+
+.url-row:focus-within {
+  border-color: var(--accent-primary);
+}
+
+.url-input {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: 'Menlo', 'Monaco', monospace;
+  font-size: 11px;
+  flex-grow: 1;
+  outline: none;
+  padding: 8px 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.copy-btn-icon {
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.copy-btn-icon:hover {
+  background: var(--accent-primary);
+  color: black;
+}
+
+.share-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.share-btn {
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+  padding: 16px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  position: relative;
+  overflow: hidden;
+}
+
+.share-btn span {
+  font-size: 18px;
+  filter: grayscale(100%);
+  transition: filter 0.3s;
+}
+
+.share-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.3);
+}
+
+.share-btn:hover span {
+  filter: grayscale(0%);
+}
+
+.share-btn.telegram:hover {
+  background: rgba(34, 158, 217, 0.15);
+  border-color: #229ED9;
+  box-shadow: 0 0 20px rgba(34, 158, 217, 0.2);
+  color: #229ED9;
+}
+
+.share-btn.vk:hover {
+  background: rgba(0, 119, 255, 0.15);
+  border-color: #0077FF;
+  box-shadow: 0 0 20px rgba(0, 119, 255, 0.2);
+  color: #0077FF;
+}
+
+.share-btn.whatsapp:hover {
+  background: rgba(37, 211, 102, 0.15);
+  border-color: #25D366;
+  box-shadow: 0 0 20px rgba(37, 211, 102, 0.2);
+  color: #25D366;
+}
+
+.share-btn.wechat:hover {
+  background: rgba(7, 193, 96, 0.15);
+  border-color: #07C160;
+  box-shadow: 0 0 20px rgba(7, 193, 96, 0.2);
+  color: #07C160;
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 20px;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+  padding: 5px;
+}
+
+.modal-close-btn:hover {
+  opacity: 1;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }

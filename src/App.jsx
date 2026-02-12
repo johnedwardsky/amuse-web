@@ -2260,78 +2260,58 @@ function App() {
 
       {/* SHARE MODAL */}
       {sharingItem && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          background: 'rgba(0,0,0,0.8)',
-          backdropFilter: 'blur(5px)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 2000
-        }} onClick={() => setSharingItem(null)}>
-          <div style={{
-            background: 'var(--panel-bg)',
-            backdropFilter: 'blur(20px)',
-            border: '1px solid var(--glass-border)',
-            borderRadius: '20px',
-            padding: '24px',
-            width: '90%',
-            maxWidth: '400px',
-            boxShadow: '0 0 40px rgba(0, 242, 255, 0.2)',
-            animation: 'fadeIn 0.2s ease-out'
-          }} onClick={e => e.stopPropagation()}>
-            <h2 style={{
-              textAlign: 'center',
-              marginBottom: '20px',
-              background: 'linear-gradient(to right, var(--accent-primary), var(--accent-secondary))',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              fontSize: '20px'
-            }}>Share Universe</h2>
+        <div className="share-overlay" onClick={() => setSharingItem(null)}>
+          <div className="share-modal" onClick={e => e.stopPropagation()}>
+            <button className="modal-close-btn" onClick={() => setSharingItem(null)}>×</button>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <button style={{ background: '#229ED9', border: 'none' }} onClick={() => {
+            <h2>Share Universe</h2>
+
+            <div className="url-row-container">
+              <div className="url-label">Direct Link</div>
+              <div className="url-row">
+                <input
+                  type="text"
+                  className="url-input"
+                  value={generateShareLink(sharingItem.params)}
+                  readOnly
+                  onClick={(e) => e.target.select()}
+                />
+                <button className="copy-btn-icon" onClick={() => {
+                  const url = generateShareLink(sharingItem.params);
+                  navigator.clipboard.writeText(url).then(() => alert('Link copied to clipboard!'));
+                }}>
+                  COPY
+                </button>
+              </div>
+            </div>
+
+            <div className="share-grid">
+              <button className="share-btn telegram" onClick={() => {
                 const url = generateShareLink(sharingItem.params);
                 window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=Check out my Amuse universe!`, '_blank');
               }}>
-                <span style={{ marginRight: '5px' }}>✈️</span> Telegram
+                <span>✈️</span> Telegram
               </button>
 
-              <button style={{ background: '#0077FF', border: 'none' }} onClick={() => {
+              <button className="share-btn vk" onClick={() => {
                 const url = generateShareLink(sharingItem.params);
                 window.open(`https://vk.com/share.php?url=${encodeURIComponent(url)}`, '_blank');
               }}>
-                <span style={{ marginRight: '5px' }}>💙</span> VK
+                <span>💙</span> VK
               </button>
 
-              <button style={{ background: '#25D366', border: 'none' }} onClick={() => {
+              <button className="share-btn whatsapp" onClick={() => {
                 const url = generateShareLink(sharingItem.params);
                 window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent("Check out my Amuse universe! " + url)}`, '_blank');
               }}>
-                <span style={{ marginRight: '5px' }}>💬</span> WhatsApp
+                <span>💬</span> WhatsApp
               </button>
 
-              <button style={{ background: '#07C160', border: 'none' }} onClick={() => {
+              <button className="share-btn wechat" onClick={() => {
                 const url = generateShareLink(sharingItem.params);
                 navigator.clipboard.writeText(url).then(() => alert('Link for WeChat copied! Open WeChat and paste to share.'));
               }}>
-                <span style={{ marginRight: '5px' }}>🟢</span> WeChat
-              </button>
-            </div>
-
-            <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <button className="primary" onClick={() => {
-                const url = generateShareLink(sharingItem.params);
-                navigator.clipboard.writeText(url).then(() => alert('Link copied to clipboard!'));
-              }}>
-                🔗 Copy Link
-              </button>
-              <button onClick={() => setSharingItem(null)} style={{ background: 'rgba(255, 255, 255, 0.1)' }}>
-                Close
+                <span>🟢</span> WeChat
               </button>
             </div>
           </div>
