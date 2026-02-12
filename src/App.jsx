@@ -110,8 +110,10 @@ function App() {
     spiroSynth: true,
     sonicEQ: true,
     genPerf: true,
-    gallery: true
+    gallery: false
   });
+
+  const [shareModal, setShareModal] = useState({ open: false, url: '', text: '' });
 
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
@@ -2214,33 +2216,9 @@ function App() {
                     <button className="small-btn" onClick={() => {
                       const url = generateShareLink(item.params);
                       const text = "Check out my Amuse universe!";
-
-                      // Simple Share Actions
-                      // 1. Copy Link (Default/Universal)
-                      navigator.clipboard.writeText(url).then(() => alert('Link copied to clipboard!'));
-
-                      // 2. Web Share API (Primary for Mobile "Image in Message") if available
-                      if (navigator.share) {
-                        // Converting DataURL to Blob for sharing is complex but ideal. 
-                        // For now we share text+url which is widely supported.
-                        // Ideally we would fetch(item.thumbnail).then(res => res.blob())...
-                        navigator.share({
-                          title: 'Amuse Universe',
-                          text: text,
-                          url: url
-                        }).catch(console.error);
-                      } else {
-                        // 3. Fallback Links for Desktop
-                        // Links removed to fix lint errors, buttons below handle this.
-                      }
+                      setShareModal({ open: true, url, text });
                     }}>🔗 Share</button>
                     <button className="small-btn delete" onClick={() => deleteFromGallery(item.id)}>🗑</button>
-                  </div>
-                  {/* Minimalist Share Icons Row */}
-                  <div style={{ display: 'flex', gap: '5px', marginTop: '5px', justifyContent: 'center' }}>
-                    <button style={{ padding: '2px 5px', fontSize: '10px' }} onClick={() => window.open(`https://t.me/share/url?url=${encodeURIComponent(generateShareLink(item.params))}&text=Amuse Art`, '_blank')}>TG</button>
-                    <button style={{ padding: '2px 5px', fontSize: '10px' }} onClick={() => window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent("Check this out: " + generateShareLink(item.params))}`, '_blank')}>WA</button>
-                    <button style={{ padding: '2px 5px', fontSize: '10px' }} onClick={() => window.open(`https://vk.com/share.php?url=${encodeURIComponent(generateShareLink(item.params))}`, '_blank')}>VK</button>
                   </div>
                 </div>
               ))}
@@ -2255,36 +2233,115 @@ function App() {
       </div>
 
       {/* VIEW MODE OVERLAY */}
-      {viewMode && (
-        <div style={{
-          position: 'fixed',
-          bottom: '40px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          zIndex: 1000,
-          textAlign: 'center',
-          width: '100%'
-        }}>
-          <button
-            className="primary"
-            style={{
-              padding: '15px 30px',
-              fontSize: '18px',
-              fontFamily: "'Orbitron', sans-serif",
-              background: 'rgba(0,0,0,0.8)',
-              color: '#00f0ff',
-              boxShadow: '0 0 20px rgba(0,240,255,0.4)',
-              border: '1px solid rgba(0,240,255,0.5)',
-              borderRadius: '30px',
-              cursor: 'pointer'
-            }}
-            onClick={handleCreateNew}
-          >
-            ✨ Хочу создать свою вселенную
-          </button>
-        </div>
-      )}
-    </div>
+      {
+        viewMode && (
+          <div style={{
+            position: 'fixed',
+            bottom: '40px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 1000,
+            textAlign: 'center',
+            width: '100%'
+          }}>
+            <button
+              className="primary"
+              style={{
+                padding: '15px 30px',
+                fontSize: '18px',
+                fontFamily: "'Orbitron', sans-serif",
+                background: 'rgba(0,0,0,0.8)',
+                color: '#00f0ff',
+                boxShadow: '0 0 20px rgba(0,240,255,0.4)',
+                border: '1px solid rgba(0,240,255,0.5)',
+                borderRadius: '30px',
+                cursor: 'pointer'
+              }}
+              onClick={handleCreateNew}
+            >
+              ✨ Хочу создать свою вселенную
+            </button>
+          </div>
+        )
+      }
+
+      {/* SHARE MODAL */}
+      {
+        shareModal.open && (
+          <div className="modal-overlay" style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0,0,0,0.85)', zIndex: 2000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            backdropFilter: 'blur(5px)'
+          }} onClick={() => setShareModal({ ...shareModal, open: false })}>
+            <div className="modal-content" style={{
+              background: 'var(--bg-secondary)', padding: '30px', borderRadius: '15px',
+              border: '1px solid var(--accent-primary)',
+              maxWidth: '90%', width: '400px',
+              textAlign: 'center',
+              position: 'relative',
+              boxShadow: '0 0 40px rgba(0, 240, 255, 0.2)'
+            }} onClick={e => e.stopPropagation()}>
+              <button style={{
+                position: 'absolute', top: '10px', right: '10px',
+                background: 'transparent', border: 'none', color: 'var(--text-tertiary)', fontSize: '20px', cursor: 'pointer'
+              }} onClick={() => setShareModal({ ...shareModal, open: false })}>✕</button>
+
+              <h2 style={{ marginTop: 0, color: 'var(--accent-primary)', fontFamily: "'Orbitron', sans-serif", fontSize: '20px' }}>Share Your Universe</h2>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '20px' }}>
+                Share this unique creation with your friends.
+              </p>
+
+              {/* QR Code */}
+              <div style={{ background: 'white', padding: '10px', borderRadius: '8px', display: 'inline-block', marginBottom: '20px' }}>
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(shareModal.url)}`}
+                  alt="QR Code"
+                  style={{ display: 'block' }}
+                />
+              </div>
+
+              {/* Link Input & Copy */}
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+                <input
+                  type="text"
+                  readOnly
+                  value={shareModal.url}
+                  style={{
+                    flex: 1, background: 'var(--bg-primary)', border: '1px solid var(--border-color)',
+                    color: 'var(--text-secondary)', padding: '8px', borderRadius: '4px', fontSize: '11px'
+                  }}
+                />
+                <button className="primary" onClick={() => {
+                  navigator.clipboard.writeText(shareModal.url).then(() => alert('Copied!'));
+                }} style={{ padding: '0 15px' }}>Copy</button>
+              </div>
+
+              {/* Social Buttons */}
+              <div className="grid-2 button-group" style={{ gap: '10px' }}>
+                <button onClick={() => window.open(`https://t.me/share/url?url=${encodeURIComponent(shareModal.url)}&text=${encodeURIComponent(shareModal.text)}`, '_blank')}
+                  style={{ background: '#229ED9', color: 'white', borderColor: '#229ED9' }}>
+                  Telegram
+                </button>
+                <button onClick={() => window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(shareModal.text + " " + shareModal.url)}`, '_blank')}
+                  style={{ background: '#25D366', color: 'white', borderColor: '#25D366' }}>
+                  WhatsApp
+                </button>
+                <button onClick={() => window.open(`https://vk.com/share.php?url=${encodeURIComponent(shareModal.url)}`, '_blank')}
+                  style={{ background: '#0077FF', color: 'white', borderColor: '#0077FF' }}>
+                  VKontakte
+                </button>
+                <button onClick={() => {
+                  navigator.clipboard.writeText(shareModal.url).then(() => alert('Link copied for WeChat! Scan QR code also works.'));
+                }} style={{ background: '#09B83E', color: 'white', borderColor: '#09B83E' }}>
+                  WeChat (Copy)
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      }
+    </div >
   );
 }
 
