@@ -1839,6 +1839,7 @@ function App() {
             </div>
             <h1>AMUSE</h1>
             <p>Generative Art & Sound Synthesis</p>
+            <p style={{ fontSize: '14px', color: 'var(--accent-primary)', marginTop: '5px', opacity: 0.8 }}>by Van Lax</p>
             <div className="loading-bar-container">
               <div className="loading-bar-progress"></div>
             </div>
@@ -1912,6 +1913,7 @@ function App() {
         <div>
           <h1>Amuse</h1>
           <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Generative Art & Sound Synthesis</p>
+          <p style={{ fontSize: '10px', color: 'var(--accent-primary)', marginTop: '2px', opacity: 0.8 }}>by Van Lax</p>
         </div>
 
         {/* Randomizers - Top Priority */}
