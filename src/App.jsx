@@ -1435,10 +1435,8 @@ function App() {
     // Base resets
     if (type === 'A') { // Symmetric
       newParams.symmetry = 6;
-      newParams.penStyle = PEN_STYLES.RAINBOW;
     } else if (type === 'B') { // Chaos
       newParams.symmetry = 1;
-      newParams.penStyle = PEN_STYLES.FRAGMENTED;
     }
 
     newParams.rotorRPM = randRPM() / 4;
