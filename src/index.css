@@ -312,7 +312,8 @@ button.primary:hover {
   border-radius: 24px;
   padding: 32px;
   width: 90%;
-  max-width: 420px;
+  max-width: 800px;
+  /* Wider to accommodate 2 columns */
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -328,23 +329,45 @@ button.primary:hover {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   letter-spacing: -0.5px;
+  width: 100%;
 }
 
+.share-content-wrapper {
+  display: flex;
+  gap: 24px;
+  align-items: stretch;
+  /* Match height */
+}
+
+/* Left column */
 .share-preview-wrapper {
+  flex: 0 0 45%;
+  /* Takes about 45% width */
   display: flex;
   justify-content: center;
-  margin-bottom: 15px;
+  align-items: center;
   position: relative;
 }
 
 .share-preview-img {
-  width: 160px;
-  height: 120px;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 0 20px rgba(0, 242, 255, 0.3);
   transition: transform 0.3s ease;
+  min-height: 250px;
+  /* Minimum height for better visibility */
+}
+
+/* Right column container */
+.share-details-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  justify-content: center;
 }
 
 .share-preview-img:hover {

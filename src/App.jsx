@@ -2320,59 +2320,63 @@ function App() {
 
             <h2>Share Universe</h2>
 
-            <div className="share-preview-wrapper">
-              <img src={sharingItem.thumbnail} alt="Shared Preview" className="share-preview-img" />
-            </div>
-
-            {generateMathFormula(sharingItem.params)}
-
-            <div className="url-row-container">
-              <div className="url-label">Direct Link</div>
-              <div className="url-row">
-                <input
-                  type="text"
-                  className="url-input"
-                  value={generateShareLink(sharingItem.params)}
-                  readOnly
-                  onClick={(e) => e.target.select()}
-                />
-                <button className="copy-btn-icon" onClick={() => {
-                  const url = generateShareLink(sharingItem.params);
-                  navigator.clipboard.writeText(url).then(() => alert('Link copied to clipboard!'));
-                }}>
-                  COPY
-                </button>
+            <div className="share-content-wrapper">
+              <div className="share-preview-wrapper">
+                <img src={sharingItem.thumbnail} alt="Shared Preview" className="share-preview-img" />
               </div>
-            </div>
 
-            <div className="share-grid">
-              <button className="share-btn telegram" onClick={() => {
-                const url = generateShareLink(sharingItem.params);
-                window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=Check out my Amuse universe!`, '_blank');
-              }}>
-                <span>✈️</span> Telegram
-              </button>
+              <div className="share-details-wrapper">
+                {generateMathFormula(sharingItem.params)}
 
-              <button className="share-btn vk" onClick={() => {
-                const url = generateShareLink(sharingItem.params);
-                window.open(`https://vk.com/share.php?url=${encodeURIComponent(url)}`, '_blank');
-              }}>
-                <span>💙</span> VK
-              </button>
+                <div className="url-row-container">
+                  <div className="url-label">Direct Link</div>
+                  <div className="url-row">
+                    <input
+                      type="text"
+                      className="url-input"
+                      value={generateShareLink(sharingItem.params)}
+                      readOnly
+                      onClick={(e) => e.target.select()}
+                    />
+                    <button className="copy-btn-icon" onClick={() => {
+                      const url = generateShareLink(sharingItem.params);
+                      navigator.clipboard.writeText(url).then(() => alert('Link copied to clipboard!'));
+                    }}>
+                      COPY
+                    </button>
+                  </div>
+                </div>
 
-              <button className="share-btn whatsapp" onClick={() => {
-                const url = generateShareLink(sharingItem.params);
-                window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent("Check out my Amuse universe! " + url)}`, '_blank');
-              }}>
-                <span>💬</span> WhatsApp
-              </button>
+                <div className="share-grid">
+                  <button className="share-btn telegram" onClick={() => {
+                    const url = generateShareLink(sharingItem.params);
+                    window.open(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=Check out my Amuse universe!`, '_blank');
+                  }}>
+                    <span>✈️</span> Telegram
+                  </button>
 
-              <button className="share-btn wechat" onClick={() => {
-                const url = generateShareLink(sharingItem.params);
-                navigator.clipboard.writeText(url).then(() => alert('Link for WeChat copied! Open WeChat and paste to share.'));
-              }}>
-                <span>🟢</span> WeChat
-              </button>
+                  <button className="share-btn vk" onClick={() => {
+                    const url = generateShareLink(sharingItem.params);
+                    window.open(`https://vk.com/share.php?url=${encodeURIComponent(url)}`, '_blank');
+                  }}>
+                    <span>💙</span> VK
+                  </button>
+
+                  <button className="share-btn whatsapp" onClick={() => {
+                    const url = generateShareLink(sharingItem.params);
+                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent("Check out my Amuse universe! " + url)}`, '_blank');
+                  }}>
+                    <span>💬</span> WhatsApp
+                  </button>
+
+                  <button className="share-btn wechat" onClick={() => {
+                    const url = generateShareLink(sharingItem.params);
+                    navigator.clipboard.writeText(url).then(() => alert('Link for WeChat copied! Open WeChat and paste to share.'));
+                  }}>
+                    <span>🟢</span> WeChat
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
