@@ -26,68 +26,70 @@ const MODES = {
   ORIGINAL: 'Linkage (Original Math)',
 };
 
+const INITIAL_PARAMS = {
+  mode: MODES.ORIGINAL,
+  acceleration: 73,
+  rotorRPM: 4,
+  baseoffsx: 0,
+  baseoffsy: -385,
+  handdist: 351,
+  soundEnabled: false,
+
+  // Left Hand
+  lrpm: 2,
+  larma: 0,
+  larm1: 105,
+  larm2: 316,
+
+  // Right Hand
+  rrpm: -3,
+  rarm1: 95,
+  rarm2: 371,
+  rarmext: 53,
+
+  // Visuals
+  penStyle: PEN_STYLES.RAINBOW,
+  brightnessMode: BRIGHTNESS_MODES.X1,
+  lineWidth: 1.0,
+  glow: false,
+  symmetry: 1, // 1 = none, 2, 4, 6, 8, 12
+  autoEvolve: false,
+  particlesEnabled: false,
+  showArms: false,
+  mouseInteraction: false,
+  showFinishPoint: false,
+  zoom: 1.0,
+  lensEnabled: false,
+  strobeEnabled: false,
+  theme: 'space',
+
+  // Synth Params
+  synthWaveform: 'sine', // sine, square, sawtooth, triangle
+  synthScale: 'chromatic', // chromatic, major, minor, pentatonic
+  synthDelay: 0.3, // seconds
+  synthFeedback: 0.4, // 0-1
+  synthReverb: 0.5, // 0-1
+  synthCutoff: 800, // 200 - 5000 Hz
+  synthResonance: 1, // 1 - 20
+  synthTranspose: 0, // -12 to +12 semitones
+  synthComplexity: 1.0, // 0.5 to 2.0 (affects chord spread)
+  synthDrive: 0, // 0 to 100 (saturation)
+  synthLFOFreq: 2.0, // 0-10 Hz
+  synthLFOAmount: 0, // 0-1 (pulse intensity)
+  synthArpSpeed: 0, // 0-20 (0 = off)
+  synthArpRange: 1, // 1-3 octaves
+  synthMelodyVol: 0.3, // 0-1 (continuous synth volume)
+  synthChordVol: 0.5, // 0-1 (pad chord volume)
+
+  // Other features
+  livedraw: true,
+  cutpixels: true,
+  autoStop: true, // NEW: Stop when pattern is complete
+};
+
 function App() {
   const canvasRef = useRef(null);
-  const [params, setParams] = useState({
-    mode: MODES.ORIGINAL,
-    acceleration: 73,
-    rotorRPM: 4,
-    baseoffsx: 0,
-    baseoffsy: -385,
-    handdist: 351,
-    soundEnabled: false,
-
-    // Left Hand
-    lrpm: 2,
-    larma: 0,
-    larm1: 105,
-    larm2: 316,
-
-    // Right Hand
-    rrpm: -3,
-    rarm1: 95,
-    rarm2: 371,
-    rarmext: 53,
-
-    // Visuals
-    penStyle: PEN_STYLES.RAINBOW,
-    brightnessMode: BRIGHTNESS_MODES.X1,
-    lineWidth: 1.0,
-    glow: false,
-    symmetry: 1, // 1 = none, 2, 4, 6, 8, 12
-    autoEvolve: false,
-    particlesEnabled: false,
-    showArms: false,
-    mouseInteraction: false,
-    showFinishPoint: false,
-    zoom: 1.0,
-    lensEnabled: false,
-    strobeEnabled: false,
-    theme: 'space',
-
-    // Synth Params
-    synthWaveform: 'sine', // sine, square, sawtooth, triangle
-    synthScale: 'chromatic', // chromatic, major, minor, pentatonic
-    synthDelay: 0.3, // seconds
-    synthFeedback: 0.4, // 0-1
-    synthReverb: 0.5, // 0-1
-    synthCutoff: 800, // 200 - 5000 Hz
-    synthResonance: 1, // 1 - 20
-    synthTranspose: 0, // -12 to +12 semitones
-    synthComplexity: 1.0, // 0.5 to 2.0 (affects chord spread)
-    synthDrive: 0, // 0 to 100 (saturation)
-    synthLFOFreq: 2.0, // 0-10 Hz
-    synthLFOAmount: 0, // 0-1 (pulse intensity)
-    synthArpSpeed: 0, // 0-20 (0 = off)
-    synthArpRange: 1, // 1-3 octaves
-    synthMelodyVol: 0.3, // 0-1 (continuous synth volume)
-    synthChordVol: 0.5, // 0-1 (pad chord volume)
-
-    // Other features
-    livedraw: true,
-    cutpixels: true,
-    autoStop: true, // NEW: Stop when pattern is complete
-  });
+  const [params, setParams] = useState(INITIAL_PARAMS);
 
   const [isRunning, setIsRunning] = useState(false);
   const [cycleProgress, setCycleProgress] = useState(0); // NEW: Track % of completion
@@ -512,10 +514,12 @@ function App() {
         const decompressed = LZString.decompressFromEncodedURIComponent(encodedParams);
         if (decompressed) {
           const sharedParams = JSON.parse(decompressed);
-          setParams(prev => ({ ...prev, ...sharedParams }));
+          // Hydrate: Merge defaults with shared differences
+          const hydrated = { ...INITIAL_PARAMS, ...sharedParams };
+          setParams(hydrated);
           setViewMode(true);
-          // Auto-start will happen via startNewRun in next effect or manual timeout
-          setTimeout(() => startNewRun({ ...params, ...sharedParams }), 500);
+          // Start the run with full hydrated state
+          setTimeout(() => startNewRun(hydrated), 500);
         }
       } catch (e) {
         console.error("Failed to parse shared link", e);
@@ -1476,9 +1480,21 @@ function App() {
     }));
   };
 
+  const minifyParams = (p) => {
+    const min = {};
+    Object.keys(p).forEach(key => {
+      // Only include if value is different from default
+      if (p[key] !== INITIAL_PARAMS[key]) {
+        min[key] = p[key];
+      }
+    });
+    return min;
+  };
+
   const generateShareLink = (paramsToShare) => {
-    // 1. Minify params (remove description strings or heavy objects if any) -> Current params are flat
-    const jsonString = JSON.stringify(paramsToShare);
+    // 1. Minify params (preserve only differences from INITIAL_PARAMS)
+    const minified = minifyParams(paramsToShare);
+    const jsonString = JSON.stringify(minified);
     // 2. Compress/Encode
     const compressed = LZString.compressToEncodedURIComponent(jsonString);
     // 3. Construct URL
