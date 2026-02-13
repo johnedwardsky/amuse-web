@@ -2414,7 +2414,7 @@ function App() {
                     className="share-btn telegram"
                     disabled={isShortening}
                     onClick={() => {
-                      window.open(`https://t.me/share/url?url=${encodeURIComponent(shortLink)}&text=${encodeURIComponent("Amuse — Посмотреть шедевр")}`, '_blank');
+                      window.open(`https://t.me/share/url?url=${encodeURIComponent(shortLink)}`, '_blank');
                     }}
                   >
                     <span>✈️</span> {isShortening ? '...' : 'Telegram'}
