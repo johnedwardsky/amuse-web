@@ -1488,6 +1488,7 @@ function App() {
 
   const [shortLink, setShortLink] = useState('');
   const [isShortening, setIsShortening] = useState(false);
+  const shorteningRef = useRef(false);
 
   useEffect(() => {
     if (sharingItem) {
@@ -1497,51 +1498,65 @@ function App() {
       if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
         setShortLink(longUrl);
         setIsShortening(false);
+        shorteningRef.current = false;
         return;
       }
 
       setIsShortening(true);
+      shorteningRef.current = true;
       setShortLink(''); // Clear previous short link
 
       const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
       const script = document.createElement('script');
 
       window[callbackName] = (data) => {
-        if (data.shorturl) {
-          setShortLink(data.shorturl);
-        } else {
-          setShortLink(longUrl); // Fallback
+        if (shorteningRef.current) {
+          if (data.shorturl) {
+            setShortLink(data.shorturl);
+          } else {
+            console.warn('is.gd failed, using long URL');
+            setShortLink(longUrl);
+          }
+          setIsShortening(false);
+          shorteningRef.current = false;
         }
-        setIsShortening(false);
         if (script.parentNode) document.body.removeChild(script);
         delete window[callbackName];
       };
 
       script.src = `https://is.gd/create.php?callback=${callbackName}&format=json&url=${encodeURIComponent(longUrl)}`;
       script.onerror = () => {
-        setShortLink(longUrl);
-        setIsShortening(false);
+        if (shorteningRef.current) {
+          setShortLink(longUrl);
+          setIsShortening(false);
+          shorteningRef.current = false;
+        }
         if (script.parentNode) document.body.removeChild(script);
         delete window[callbackName];
       };
 
       document.body.appendChild(script);
 
-      // 5s absolute timeout to unlock buttons
+      // 8s absolute timeout to unlock buttons if the service is dead
       const timeoutId = setTimeout(() => {
-        if (isShortening) {
+        if (shorteningRef.current) {
+          console.warn('Shortening timed out');
           setShortLink(longUrl);
           setIsShortening(false);
+          shorteningRef.current = false;
         }
-      }, 5000);
+      }, 8000);
 
       return () => {
         clearTimeout(timeoutId);
+        shorteningRef.current = false;
         if (script.parentNode) document.body.removeChild(script);
+        if (window[callbackName]) delete window[callbackName];
       };
     } else {
       setShortLink('');
       setIsShortening(false);
+      shorteningRef.current = false;
     }
   }, [sharingItem]);
 
