@@ -1507,15 +1507,11 @@ function App() {
     return url;
   };
 
-  const [shortLink, setShortLink] = useState('');
-  const [isShortening, setIsShortening] = useState(false);
-  const shorteningRef = useRef(false);
 
   useEffect(() => {
     if (sharingItem) {
       const longUrl = generateShareLink(sharingItem.params);
 
-      // Initialize state
       if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
         setShortLink(longUrl);
         setIsShortening(false);
@@ -1525,54 +1521,85 @@ function App() {
 
       setIsShortening(true);
       shorteningRef.current = true;
-      setShortLink(''); // Clear previous short link
+      setShortLink('');
 
-      const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
-      const script = document.createElement('script');
+      const cleanup = (script, callbackName) => {
+        if (script && script.parentNode) document.body.removeChild(script);
+        if (window[callbackName]) delete window[callbackName];
+      };
 
-      window[callbackName] = (data) => {
-        if (shorteningRef.current) {
-          if (data.shorturl) {
-            setShortLink(data.shorturl);
-          } else {
-            console.warn('is.gd failed, using long URL');
-            setShortLink(longUrl);
+      const tryTinyUrl = () => {
+        const callbackName = 'tinyurl_callback_' + Math.round(100000 * Math.random());
+        const script = document.createElement('script');
+
+        window[callbackName] = (data) => {
+          if (shorteningRef.current) {
+            if (data && data.tinyurl) {
+              setShortLink(data.tinyurl);
+              setIsShortening(false);
+              shorteningRef.current = false;
+            } else {
+              setShortLink(longUrl);
+              setIsShortening(false);
+              shorteningRef.current = false;
+            }
           }
-          setIsShortening(false);
-          shorteningRef.current = false;
-        }
-        if (script.parentNode) document.body.removeChild(script);
-        delete window[callbackName];
+          cleanup(script, callbackName);
+        };
+
+        script.src = `https://tinyurl.com/api-create.php?url=${encodeURIComponent(longUrl)}&callback=${callbackName}`;
+        script.onerror = () => {
+          if (shorteningRef.current) {
+            setShortLink(longUrl);
+            setIsShortening(false);
+            shorteningRef.current = false;
+          }
+          cleanup(script, callbackName);
+        };
+        document.body.appendChild(script);
       };
 
-      script.src = `https://is.gd/create.php?callback=${callbackName}&format=json&url=${encodeURIComponent(longUrl)}`;
-      script.onerror = () => {
-        if (shorteningRef.current) {
-          setShortLink(longUrl);
-          setIsShortening(false);
-          shorteningRef.current = false;
-        }
-        if (script.parentNode) document.body.removeChild(script);
-        delete window[callbackName];
+      const tryIsGd = () => {
+        const callbackName = 'isgd_callback_' + Math.round(100000 * Math.random());
+        const script = document.createElement('script');
+
+        window[callbackName] = (data) => {
+          if (shorteningRef.current) {
+            if (data && data.shorturl) {
+              setShortLink(data.shorturl);
+              setIsShortening(false);
+              shorteningRef.current = false;
+            } else {
+              console.warn('is.gd failed, trying TinyURL...');
+              tryTinyUrl();
+            }
+          }
+          cleanup(script, callbackName);
+        };
+
+        script.src = `https://is.gd/create.php?callback=${callbackName}&format=json&url=${encodeURIComponent(longUrl)}`;
+        script.onerror = () => {
+          console.warn('is.gd error, trying TinyURL...');
+          tryTinyUrl();
+          cleanup(script, callbackName);
+        };
+        document.body.appendChild(script);
       };
 
-      document.body.appendChild(script);
+      tryIsGd();
 
-      // 8s absolute timeout to unlock buttons if the service is dead
       const timeoutId = setTimeout(() => {
         if (shorteningRef.current) {
-          console.warn('Shortening timed out');
+          console.warn('Shortening timeout, using long URL');
           setShortLink(longUrl);
           setIsShortening(false);
           shorteningRef.current = false;
         }
-      }, 8000);
+      }, 10000); // 10s total patience
 
       return () => {
         clearTimeout(timeoutId);
         shorteningRef.current = false;
-        if (script.parentNode) document.body.removeChild(script);
-        if (window[callbackName]) delete window[callbackName];
       };
     } else {
       setShortLink('');
