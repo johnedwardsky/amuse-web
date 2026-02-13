@@ -2453,7 +2453,8 @@ function App() {
                       window.open(`https://t.me/share/url?url=${encodeURIComponent(shortLink)}`, '_blank');
                     }}
                   >
-                    <span>✈️</span> {isShortening ? '...' : 'Telegram'}
+                    {!isShortening && <span>✈️</span>}
+                    {isShortening ? 'Preparing...' : 'Telegram'}
                   </button>
 
                   <button
@@ -2463,7 +2464,8 @@ function App() {
                       window.open(`https://vk.com/share.php?url=${encodeURIComponent(shortLink)}&title=${encodeURIComponent("Amuse — Посмотреть шедевр")}`, '_blank');
                     }}
                   >
-                    <span>💙</span> {isShortening ? '...' : 'VK'}
+                    {!isShortening && <span>💙</span>}
+                    {isShortening ? 'Preparing...' : 'VK'}
                   </button>
 
                   <button
@@ -2473,7 +2475,8 @@ function App() {
                       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent("Amuse — Посмотреть шедевр: " + shortLink)}`, '_blank');
                     }}
                   >
-                    <span>💬</span> {isShortening ? '...' : 'WhatsApp'}
+                    {!isShortening && <span>💬</span>}
+                    {isShortening ? 'Preparing...' : 'WhatsApp'}
                   </button>
 
                   <button
@@ -2483,7 +2486,8 @@ function App() {
                       navigator.clipboard.writeText(shortLink).then(() => alert('Link for WeChat copied! Open WeChat and paste to share.'));
                     }}
                   >
-                    <span>🟢</span> {isShortening ? '...' : 'WeChat'}
+                    {!isShortening && <span>🟢</span>}
+                    {isShortening ? 'Preparing...' : 'WeChat'}
                   </button>
                 </div>
               </div>
