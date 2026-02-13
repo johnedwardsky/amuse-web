@@ -145,6 +145,7 @@ function App() {
 
   const [gallery, setGallery] = useState([]);
   const [isGalleryLoaded, setIsGalleryLoaded] = useState(false); // NEW: Migration guard
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // NEW: Mobile UI control
   const cycleTargetRef = useRef(null);
   const rotationCounterRef = useRef(0);
 
@@ -1996,7 +1997,17 @@ function App() {
         )}
       </div>
 
-      <div className="controls-panel" style={viewMode ? { display: 'none' } : {}}>
+      {!viewMode && (
+        <button
+          className="mobile-toggle"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          aria-label="Toggle Menu"
+        >
+          {isMobileMenuOpen ? '✕' : '⚙️'}
+        </button>
+      )}
+
+      <div className={`controls-panel ${isMobileMenuOpen ? 'mobile-open' : ''}`} style={viewMode ? { display: 'none' } : {}}>
         <div>
           <h1>Amuse</h1>
           <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Generative Art & Sound Synthesis</p>
