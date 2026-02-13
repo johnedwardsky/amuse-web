@@ -2391,19 +2391,19 @@ function App() {
 
                 <div className="share-grid">
                   <button className="share-btn telegram" onClick={() => {
-                    window.open(`https://t.me/share/url?url=${encodeURIComponent(shortLink)}&text=Check out my Amuse universe!`, '_blank');
+                    window.open(`https://t.me/share/url?url=${encodeURIComponent(shortLink)}&text=${encodeURIComponent("Amuse — Посмотреть шедевр")}`, '_blank');
                   }}>
                     <span>✈️</span> Telegram
                   </button>
 
                   <button className="share-btn vk" onClick={() => {
-                    window.open(`https://vk.com/share.php?url=${encodeURIComponent(shortLink)}`, '_blank');
+                    window.open(`https://vk.com/share.php?url=${encodeURIComponent(shortLink)}&title=${encodeURIComponent("Amuse — Посмотреть шедевр")}`, '_blank');
                   }}>
                     <span>💙</span> VK
                   </button>
 
                   <button className="share-btn whatsapp" onClick={() => {
-                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent("Check out my Amuse universe! " + shortLink)}`, '_blank');
+                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent("Amuse — Посмотреть шедевр: " + shortLink)}`, '_blank');
                   }}>
                     <span>💬</span> WhatsApp
                   </button>
