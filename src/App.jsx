@@ -1507,6 +1507,9 @@ function App() {
     return url;
   };
 
+  const [shortLink, setShortLink] = useState('');
+  const [isShortening, setIsShortening] = useState(false);
+  const shorteningRef = useRef(false);
 
   useEffect(() => {
     if (sharingItem) {
