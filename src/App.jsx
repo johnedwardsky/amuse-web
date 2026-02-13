@@ -1926,6 +1926,7 @@ function App() {
             </div>
             <h1>AMUSE</h1>
             <p>Generative Art & Sound Synthesis</p>
+            <p style={{ fontSize: '12px', marginTop: '15px', opacity: 0.6, letterSpacing: '2px', fontFamily: "'Orbitron', sans-serif" }}>created by Van Lax</p>
             <div className="loading-bar-container">
               <div className="loading-bar-progress"></div>
             </div>
@@ -1999,6 +2000,7 @@ function App() {
         <div>
           <h1>Amuse</h1>
           <p style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Generative Art & Sound Synthesis</p>
+          <p style={{ fontSize: '9px', color: 'var(--accent-primary)', marginTop: '5px', opacity: 0.8, letterSpacing: '1px', textTransform: 'uppercase' }}>Created by Van Lax</p>
         </div>
 
         {/* Randomizers - Top Priority */}
