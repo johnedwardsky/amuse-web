@@ -2390,28 +2390,44 @@ function App() {
                 </div>
 
                 <div className="share-grid">
-                  <button className="share-btn telegram" onClick={() => {
-                    window.open(`https://t.me/share/url?url=${encodeURIComponent(shortLink)}&text=${encodeURIComponent("Amuse — Посмотреть шедевр")}`, '_blank');
-                  }}>
-                    <span>✈️</span> Telegram
+                  <button
+                    className="share-btn telegram"
+                    disabled={isShortening}
+                    onClick={() => {
+                      window.open(`https://t.me/share/url?url=${encodeURIComponent(shortLink)}&text=${encodeURIComponent("Amuse — Посмотреть шедевр")}`, '_blank');
+                    }}
+                  >
+                    <span>✈️</span> {isShortening ? '...' : 'Telegram'}
                   </button>
 
-                  <button className="share-btn vk" onClick={() => {
-                    window.open(`https://vk.com/share.php?url=${encodeURIComponent(shortLink)}&title=${encodeURIComponent("Amuse — Посмотреть шедевр")}`, '_blank');
-                  }}>
-                    <span>💙</span> VK
+                  <button
+                    className="share-btn vk"
+                    disabled={isShortening}
+                    onClick={() => {
+                      window.open(`https://vk.com/share.php?url=${encodeURIComponent(shortLink)}&title=${encodeURIComponent("Amuse — Посмотреть шедевр")}`, '_blank');
+                    }}
+                  >
+                    <span>💙</span> {isShortening ? '...' : 'VK'}
                   </button>
 
-                  <button className="share-btn whatsapp" onClick={() => {
-                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent("Amuse — Посмотреть шедевр: " + shortLink)}`, '_blank');
-                  }}>
-                    <span>💬</span> WhatsApp
+                  <button
+                    className="share-btn whatsapp"
+                    disabled={isShortening}
+                    onClick={() => {
+                      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent("Amuse — Посмотреть шедевр: " + shortLink)}`, '_blank');
+                    }}
+                  >
+                    <span>💬</span> {isShortening ? '...' : 'WhatsApp'}
                   </button>
 
-                  <button className="share-btn wechat" onClick={() => {
-                    navigator.clipboard.writeText(shortLink).then(() => alert('Link for WeChat copied! Open WeChat and paste to share.'));
-                  }}>
-                    <span>🟢</span> WeChat
+                  <button
+                    className="share-btn wechat"
+                    disabled={isShortening}
+                    onClick={() => {
+                      navigator.clipboard.writeText(shortLink).then(() => alert('Link for WeChat copied! Open WeChat and paste to share.'));
+                    }}
+                  >
+                    <span>🟢</span> {isShortening ? '...' : 'WeChat'}
                   </button>
                 </div>
               </div>
