@@ -1507,6 +1507,7 @@ function App() {
     return url;
   };
 
+  // Sharing State
   const [shortLink, setShortLink] = useState('');
   const [isShortening, setIsShortening] = useState(false);
   const shorteningRef = useRef(false);
@@ -2051,9 +2052,18 @@ function App() {
             <button className={params.showArms ? 'active' : ''} onClick={() => updateParam('showArms', !params.showArms)}>🦾 Arms</button>
             <button className={params.lensEnabled ? 'active' : ''} onClick={() => updateParam('lensEnabled', !params.lensEnabled)}>🔍 Lens</button>
           </div>
-          <div className="button-group grid-2" style={{ marginTop: '10px' }}>
-            <button className="primary" onClick={exportPNG}>📥 PNG</button>
-            <button onClick={exportSVG}>📥 SVG</button>
+          <div className="button-group grid-1" style={{ marginTop: '10px' }}>
+            <button
+              className="primary"
+              onClick={() => setSharingItem({
+                id: 'current',
+                params: { ...params },
+                thumbnail: canvasRef.current ? canvasRef.current.toDataURL() : ''
+              })}
+              style={{ background: 'linear-gradient(135deg, #00f0ff 0%, #0077ff 100%)', color: 'black', fontWeight: 'bold' }}
+            >
+              🔗 SHARE UNIVERSE
+            </button>
           </div>
         </div>
 
@@ -2443,7 +2453,7 @@ function App() {
           <div className="share-modal" onClick={e => e.stopPropagation()}>
             <button className="modal-close-btn" onClick={() => setSharingItem(null)}>×</button>
 
-            <h2>Share Universe <span style={{ fontSize: '10px', opacity: 0.5 }}>v2.0</span></h2>
+            <h2>Share Universe</h2>
 
             <div className="share-content-wrapper">
               <div className="share-preview-wrapper">
