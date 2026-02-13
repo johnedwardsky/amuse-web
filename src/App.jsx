@@ -1492,33 +1492,53 @@ function App() {
   useEffect(() => {
     if (sharingItem) {
       const longUrl = generateShareLink(sharingItem.params);
-      setShortLink(longUrl); // Default to long URL immediately
 
-      // Skip shortening for localhost to avoid errors (is.gd requires public URLs)
+      // Initialize state
       if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        setShortLink(longUrl);
+        setIsShortening(false);
         return;
       }
 
       setIsShortening(true);
+      setShortLink(''); // Clear previous short link
 
-      // Use is.gd via JSONP to avoid CORS issues
       const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
+      const script = document.createElement('script');
+
       window[callbackName] = (data) => {
-        delete window[callbackName];
-        document.body.removeChild(script);
         if (data.shorturl) {
           setShortLink(data.shorturl);
+        } else {
+          setShortLink(longUrl); // Fallback
         }
         setIsShortening(false);
+        if (script.parentNode) document.body.removeChild(script);
+        delete window[callbackName];
       };
 
-      const script = document.createElement('script');
       script.src = `https://is.gd/create.php?callback=${callbackName}&format=json&url=${encodeURIComponent(longUrl)}`;
       script.onerror = () => {
+        setShortLink(longUrl);
         setIsShortening(false);
-        // Fallback silently to long URL
+        if (script.parentNode) document.body.removeChild(script);
+        delete window[callbackName];
       };
+
       document.body.appendChild(script);
+
+      // 5s absolute timeout to unlock buttons
+      const timeoutId = setTimeout(() => {
+        if (isShortening) {
+          setShortLink(longUrl);
+          setIsShortening(false);
+        }
+      }, 5000);
+
+      return () => {
+        clearTimeout(timeoutId);
+        if (script.parentNode) document.body.removeChild(script);
+      };
     } else {
       setShortLink('');
       setIsShortening(false);
