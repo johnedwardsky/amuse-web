@@ -1483,9 +1483,14 @@ function App() {
   const minifyParams = (p) => {
     const min = {};
     Object.keys(p).forEach(key => {
-      // Only include if value is different from default
-      if (p[key] !== INITIAL_PARAMS[key]) {
-        min[key] = p[key];
+      // Comparison for numbers and strings
+      const v1 = p[key];
+      const v2 = INITIAL_PARAMS[key];
+      if (typeof v1 === 'number' && typeof v2 === 'number') {
+        // Skip default numbers (allowing small float diff)
+        if (Math.abs(v1 - v2) > 0.0001) min[key] = v1;
+      } else if (v1 !== v2) {
+        min[key] = v1;
       }
     });
     return min;
@@ -2408,7 +2413,7 @@ function App() {
           <div className="share-modal" onClick={e => e.stopPropagation()}>
             <button className="modal-close-btn" onClick={() => setSharingItem(null)}>×</button>
 
-            <h2>Share Universe</h2>
+            <h2>Share Universe <span style={{ fontSize: '10px', opacity: 0.5 }}>v2.0</span></h2>
 
             <div className="share-content-wrapper">
               <div className="share-preview-wrapper">
