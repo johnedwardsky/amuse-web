@@ -162,6 +162,7 @@ function App() {
   const waveformCanvasRef = useRef(null);
   const waveformPeaksRef = useRef([]); // Pre-computed amplitude peaks for full waveform
   const waveformDraggingRef = useRef(false);
+  const cymaticsEnvelopesRef = useRef(new Array(7).fill(0)); // Energy tracking for 7 bands
 
   const [cymaticsTrackName, setCymaticsTrackName] = useState(null);
   const [cymaticsDuration, setCymaticsDuration] = useState(0);
@@ -770,8 +771,7 @@ function App() {
       let bandParams = []; // Parameters for each of the 7 bands
       const sensitivity = curParams.cymaticsSensitivity || 1.5;
       const friction = curParams.cymaticsFriction || 0.95;
-      const speed = curParams.cymaticsSpeed || 0.5;
-      const jitter = 0.5;
+      const baseSpeed = curParams.cymaticsSpeed || 0.5;
 
       if (analyserRef.current && isRunningRef.current) {
         const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
@@ -797,11 +797,28 @@ function App() {
               maxIdx = i;
             }
           }
-          const amp = (maxVal / 255) * r.weight * sensitivity;
+          
+          const rawAmp = maxVal / 255;
+          // Smoothing (Envelope Follower)
+          const prevEnv = cymaticsEnvelopesRef.current[idx];
+          const attack = 0.4;
+          const release = 0.15;
+          const env = rawAmp > prevEnv 
+            ? prevEnv + (rawAmp - prevEnv) * attack 
+            : prevEnv - (prevEnv - rawAmp) * release;
+          
+          cymaticsEnvelopesRef.current[idx] = env;
+          
+          // Transient detection (sudden spike for rhythm)
+          const transient = Math.max(0, rawAmp - prevEnv);
+          const amp = env * r.weight * sensitivity;
+          
           return {
-            n: 1 + (maxIdx % (5 + idx * 2)), 
-            m: 1 + (Math.floor(maxIdx / 4) % (4 + idx * 2)),
+            n: (1 + (maxIdx % (5 + idx * 2))) + (env * 2), // Pattern morphs with volume
+            m: (1 + (Math.floor(maxIdx / 4) % (4 + idx * 2))) + (env * 2),
             amp: amp,
+            transient: transient, // For kick/beat response
+            env: env,
             color: r.color
           };
         });
@@ -819,10 +836,11 @@ function App() {
       const getParticleColor = (p, overrideVal) => {
         const nx = p.x / curSize.width;
         const ny = p.y / curSize.height;
-        const baseVal = overrideVal !== undefined ? overrideVal : 1.0;
+        const h = bandParams[p.band] || { env: 1.0 };
+        const baseVal = overrideVal !== undefined ? overrideVal : (0.4 + h.env * 0.6); // Respond to volume levels
         
         if (curParams.cymaticsRainbowMode && bandParams[p.band]) {
-          return `${bandParams[p.band].color}${Math.floor((0.3 + baseVal * 0.7) * 255).toString(16).padStart(2, '0')}`;
+          return `${bandParams[p.band].color}${Math.floor(Math.min(1.0, baseVal) * 255).toString(16).padStart(2, '0')}`;
         }
 
         switch (curParams.penStyle) {
@@ -895,14 +913,20 @@ function App() {
           const valDX = getValAt(nx + eps, ny) - val;
           const valDY = getValAt(nx, ny + eps) - val;
           
+          const h = bandParams[p.band] || { env: 0, transient: 0 };
           const force = Math.abs(val);
-          p.vx = p.vx * friction + (valDX > 0 ? -1 : 1) * force * speed + (Math.random() - 0.5) * jitter;
-          p.vy = p.vy * friction + (valDY > 0 ? -1 : 1) * force * speed + (Math.random() - 0.5) * jitter;
+          // Speed and Jitter react to transients (beats) for sharp rhythm
+          const activeSpeed = baseSpeed + (h.transient * 15.0);
+          const activeJitter = 0.3 + (h.transient * 5.0);
+          
+          p.vx = p.vx * friction + (valDX > 0 ? -1 : 1) * force * activeSpeed + (Math.random() - 0.5) * activeJitter;
+          p.vy = p.vy * friction + (valDY > 0 ? -1 : 1) * force * activeSpeed + (Math.random() - 0.5) * activeJitter;
           p.x += p.vx; p.y += p.vy;
           if (p.x < 0) p.x = curSize.width; if (p.x > curSize.width) p.x = 0;
           if (p.y < 0) p.y = curSize.height; if (p.y > curSize.height) p.y = 0;
           ctx.fillStyle = getParticleColor(p);
-          ctx.fillRect(p.x, p.y, 2, 2);
+          const pSize = 1.5 + (h.env * 1.5); // Pulse with volume
+          ctx.fillRect(p.x, p.y, pSize, pSize);
         });
       }
       
