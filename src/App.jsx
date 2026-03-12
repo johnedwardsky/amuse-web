@@ -95,7 +95,8 @@ const INITIAL_PARAMS = {
   cymaticsFriction: 0.95,
   cymaticsSpeed: 0.5,
   cymaticsFieldMode: false, // Grid/Field view
-  cymaticsRainbowMode: true // Multi-band spectral coloring
+  cymaticsRainbowMode: true, // Multi-band spectral coloring
+  cymaticsGhostMode: false   // Trailing/Shadow effect
 };
 
 function App() {
@@ -823,7 +824,8 @@ function App() {
         });
       }
 
-      ctx.fillStyle = curParams.theme === 'noir' ? 'rgba(0,0,0,0.15)' : 'rgba(5,5,8,0.15)';
+      const clearAlpha = curParams.cymaticsGhostMode ? 0.04 : 0.15;
+      ctx.fillStyle = curParams.theme === 'noir' ? `rgba(0,0,0,${clearAlpha})` : `rgba(5,5,8,${clearAlpha})`;
       ctx.fillRect(0, 0, curSize.width, curSize.height);
 
       const getChladniValForBand = (nx, ny, bandIdx) => {
@@ -2577,6 +2579,13 @@ function App() {
                   style={{ fontSize: '10px' }}
                 >
                   {params.cymaticsRainbowMode ? '🌈 Spectral' : '⚪ Static'}
+                </button>
+                <button 
+                  className={params.cymaticsGhostMode ? 'active' : ''}
+                  onClick={() => updateParam('cymaticsGhostMode', !params.cymaticsGhostMode)}
+                  style={{ fontSize: '10px' }}
+                >
+                  {params.cymaticsGhostMode ? '👻 Ghost ON' : '👻 Ghost OFF'}
                 </button>
               </div>
 
