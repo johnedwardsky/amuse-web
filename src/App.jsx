@@ -834,6 +834,19 @@ function App() {
                         Math.cos(h.m * Math.PI * nx) * Math.cos(h.n * Math.PI * ny));
       };
 
+      const getChladniValSum = (nx, ny) => {
+        let t = 0;
+        if (bandParams.length > 0) {
+          bandParams.forEach((_, idx) => t += getChladniValForBand(nx, ny, idx));
+        } else {
+          // Fallback to static params if no audio analysis
+          const n = curParams.cymaticsN;
+          const m = curParams.cymaticsM;
+          t = Math.cos(n * Math.PI * nx) * Math.cos(m * Math.PI * ny) - Math.cos(m * Math.PI * nx) * Math.cos(n * Math.PI * ny);
+        }
+        return t;
+      };
+
       const getParticleColor = (p, overrideVal) => {
         const nx = p.x / curSize.width;
         const ny = p.y / curSize.height;
@@ -869,7 +882,7 @@ function App() {
             const nx = (x / curSize.width) - 0.5;
             const ny = (y / curSize.height) - 0.5;
             
-            const val = getChladniVal(nx, ny);
+            const val = getChladniValSum(nx, ny);
             const intensity = Math.abs(val);
             
             if (intensity > 0.05) {
@@ -890,21 +903,12 @@ function App() {
           // In Rainbow Mode, particle only reacts to its assigned frequency band
           const val = curParams.cymaticsRainbowMode 
             ? getChladniValForBand(nx, ny, p.band)
-            : (() => { 
-                // Summed harmonics for normal mode
-                let t = 0;
-                bandParams.forEach(h => t += h.amp * (Math.cos(h.n * Math.PI * nx) * Math.cos(h.m * Math.PI * ny) - Math.cos(h.m * Math.PI * nx) * Math.cos(h.n * Math.PI * ny)));
-                return t;
-              })();
+            : getChladniValSum(nx, ny);
 
           const eps = 0.01;
           const getValAt = (ox, oy) => curParams.cymaticsRainbowMode 
             ? getChladniValForBand(ox, oy, p.band)
-            : (() => { 
-                let t = 0;
-                bandParams.forEach(h => t += h.amp * (Math.cos(h.n * Math.PI * ox) * Math.cos(h.m * Math.PI * oy) - Math.cos(h.m * Math.PI * ox) * Math.cos(h.n * Math.PI * oy)));
-                return t;
-              })();
+            : getChladniValSum(ox, oy);
 
           const valDX = getValAt(nx + eps, ny) - val;
           const valDY = getValAt(nx, ny + eps) - val;
