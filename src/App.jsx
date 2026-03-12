@@ -913,68 +913,53 @@ function App() {
         if (bandParams.length > 0) {
           bandParams.forEach((_, idx) => t += getChladniValForBand(nx, ny, idx));
         } else {
-          // Fallback to static params if no audio analysis
-          const n = curParams.cymaticsN;
-          const m = curParams.cymaticsM;
-          t = Math.cos(n * Math.PI * nx) * Math.cos(m * Math.PI * ny) - Math.cos(m * Math.PI * nx) * Math.cos(n * Math.PI * ny);
+          t = Math.cos(curParams.cymaticsN * Math.PI * nx) * Math.cos(curParams.cymaticsM * Math.PI * ny) - 
+              Math.cos(curParams.cymaticsM * Math.PI * nx) * Math.cos(curParams.cymaticsN * Math.PI * ny);
         }
         return t;
       };
 
       const getParticleColor = (p, overrideVal) => {
-        const nx = p.x / curSize.width;
-        const ny = p.y / curSize.height;
         const h = bandParams[p.band] || { env: 1.0 };
-        const baseVal = overrideVal !== undefined ? overrideVal : (0.4 + h.env * 0.6); // Respond to volume levels
-        
+        const baseVal = overrideVal !== undefined ? overrideVal : (0.4 + h.env * 0.6);
         if (curParams.cymaticsRainbowMode && bandParams[p.band]) {
           return `${bandParams[p.band].color}${Math.floor(Math.min(1.0, baseVal) * 255).toString(16).padStart(2, '0')}`;
         }
-
-        switch (curParams.penStyle) {
-          case PEN_STYLES.RAINBOW: return `hsla(${(nx + ny) * 360 + frameCount.current}, 70%, 60%, ${baseVal})`;
-          case PEN_STYLES.BLUE: return `rgba(0, ${150 + nx * 105}, 255, ${0.4 + baseVal * 0.6})`;
-          case PEN_STYLES.GOLDEN: return `rgba(255, ${150 + ny * 105}, 0, ${0.4 + baseVal * 0.6})`;
-          case PEN_STYLES.BW: return `rgba(255, 255, 255, ${0.1 + baseVal * 0.9})`;
-          case PEN_STYLES.HOLOGRAPHIC: return `hsla(${(nx - ny) * 360}, 100%, 75%, ${0.5 * baseVal})`;
-          default: return `rgba(255, 255, 255, ${baseVal})`;
-        }
+        return `rgba(255, 255, 255, ${baseVal})`;
       };
 
       ctx.shadowBlur = 0;
 
       if (curParams.cymaticsFieldMode) {
-        // --- FIELD MODE: Geometric Grid (Modeling the medium) ---
+        // --- FIELD MODE: Geometric Grid ---
         const spacing = 18;
         const rows = Math.ceil(curSize.height / spacing);
         const cols = Math.ceil(curSize.width / spacing);
+        const rLimitSq = (Math.min(curSize.width, curSize.height) * 0.48) ** 2;
         
         for (let r = 0; r <= rows; r++) {
           for (let c = 0; c <= cols; c++) {
-            const x = c * spacing;
-            const y = r * spacing;
-            const nx = (x / curSize.width) - 0.5;
-            const ny = (y / curSize.height) - 0.5;
-            
+            const x = c * spacing, y = r * spacing;
+            if (curParams.cymaticsCircular) {
+              const dx = x - centerX, dy = y - centerY;
+              if (dx*dx + dy*dy > rLimitSq) continue;
+            }
+            const nx = (x / curSize.width) - 0.5, ny = (y / curSize.height) - 0.5;
             const val = getChladniValSum(nx, ny);
             const intensity = Math.abs(val);
-            
             if (intensity > 0.05) {
-              const size = intensity * 4;
-              ctx.fillStyle = getParticleColor({ x, y }, Math.min(1.0, intensity * 2));
-              ctx.beginPath();
-              ctx.arc(x, y, size, 0, Math.PI * 2);
-              ctx.fill();
+              ctx.fillStyle = getParticleColor({ band: 0 }, Math.min(1.0, intensity * 2));
+              ctx.beginPath(); ctx.arc(x, y, intensity * 4, 0, 6.28); ctx.fill();
             }
           }
         }
       } else {
         // --- PARTICLE MODE: Optimized Sand Simulation ---
-        const friction = curParams.cymaticsOilMode ? 0.98 : (curParams.cymaticsFriction || 0.95);
-        const baseSpeed = curParams.cymaticsSpeed || 0.5;
         const rLimit = Math.min(curSize.width, curSize.height) * 0.48;
         const rLimitSq = rLimit * rLimit;
         const zoomV = curParams.cymaticsZoom * 0.01;
+        const friction = curParams.cymaticsOilMode ? 0.98 : (curParams.cymaticsFriction || 0.95);
+        const baseSpeed = curParams.cymaticsSpeed || 0.5;
 
         for (let b = 0; b < 7; b++) {
           const h = bandParams[b] || { env: 0, transient: 0 };
@@ -982,13 +967,12 @@ function App() {
           const curJitter = curParams.cymaticsOilMode ? 0.1 : (0.3 + h.transient * 5.0);
           const pS = curParams.cymaticsOilMode ? (3 + h.env * 6) : (1.5 + h.env * 1.5);
           
-          ctx.fillStyle = getParticleColor({ x: 0, y: 0, band: b }, undefined);
+          ctx.fillStyle = getParticleColor({ band: b }, undefined);
           if (curParams.cymaticsOilMode) ctx.globalAlpha = 0.3;
 
           const pGroup = cymaticsParticles.current.filter(p => b === p.band);
           pGroup.forEach(p => {
-            const nx = (p.x / curSize.width) - 0.5;
-            const ny = (p.y / curSize.height) - 0.5;
+            const nx = (p.x / curSize.width) - 0.5, ny = (p.y / curSize.height) - 0.5;
             const val = curParams.cymaticsRainbowMode ? getChladniValForBand(nx, ny, b) : getChladniValSum(nx, ny);
             const eps = 0.01;
             const vDX = (curParams.cymaticsRainbowMode ? getChladniValForBand(nx+eps, ny, b) : getChladniValSum(nx+eps, ny)) - val;
@@ -1014,11 +998,15 @@ function App() {
 
             if (curParams.cymaticsCircular) {
                const dx = p.x - centerX, dy = p.y - centerY;
-               if (dx*dx + dy*dy > rLimitSq) {
-                  const a = Math.atan2(dy, dx);
-                  p.x = centerX + Math.cos(a + 3.141) * rLimit * 0.98;
-                  p.y = centerY + Math.sin(a + 3.141) * rLimit * 0.98;
-                  p.vx *= -0.2; p.vy *= -0.2;
+               const dSq = dx*dx + dy*dy;
+               if (dSq > rLimitSq) {
+                  const dist = Math.sqrt(dSq);
+                  // Vector normalization for reflection (no atan2/cos/sin)
+                  const ux = dx / dist; 
+                  const uy = dy / dist;
+                  p.x = centerX + ux * rLimit * 0.99;
+                  p.y = centerY + uy * rLimit * 0.99;
+                  p.vx *= -0.3; p.vy *= -0.3;
                }
             } else {
               if (p.x < 0) p.x = curSize.width; else if (p.x > curSize.width) p.x = 0;
