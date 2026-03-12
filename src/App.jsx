@@ -566,6 +566,18 @@ function App() {
     }
   };
 
+  const handleCymaticsExport = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    // Create a temporary link
+    const link = document.createElement('a');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    link.download = `amuse-cymatics-art-${timestamp}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  };
+
   const handleAudioUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -2663,6 +2675,12 @@ function App() {
                   style={{ fontSize: '10px', background: 'rgba(255,255,255,0.1)' }}
                 >
                   🎲 Shuffle
+                </button>
+                <button 
+                  onClick={handleCymaticsExport}
+                  style={{ fontSize: '10px', background: 'rgba(0,255,150,0.2)', color: '#00ffaa', border: '1px solid rgba(0,255,150,0.3)' }}
+                >
+                  💾 Save Art
                 </button>
               </div>
 
