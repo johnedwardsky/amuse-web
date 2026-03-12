@@ -98,7 +98,8 @@ const INITIAL_PARAMS = {
   cymaticsRainbowMode: true, // Multi-band spectral coloring
   cymaticsGhostMode: false,   // Trailing/Shadow effect
   cymaticsOilMode: false,      // Art/Oil painting effect
-  cymaticsSpin: 0             // Rotation speed
+  cymaticsSpin: 0,            // Rotation speed
+  cymaticsZoom: 0             // Flight/Zoom speed
 };
 
 function App() {
@@ -980,6 +981,33 @@ function App() {
           p.vx = p.vx * activeFriction + (valDX > 0 ? -1 : 1) * force * activeSpeed + (Math.random() - 0.5) * activeJitter;
           p.vy = p.vy * activeFriction + (valDY > 0 ? -1 : 1) * force * activeSpeed + (Math.random() - 0.5) * activeJitter;
           p.x += p.vx; p.y += p.vy;
+
+          // --- FLIGHT / ZOOM EFFECT ---
+          if (curParams.cymaticsZoom !== 0) {
+            const dx = p.x - centerX;
+            const dy = p.y - centerY;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            const zoomStr = curParams.cymaticsZoom * 0.01;
+            
+            p.x += dx * zoomStr;
+            p.y += dy * zoomStr;
+
+            // Wrap particles for continuous tunnel effect
+            const maxRadius = Math.max(curSize.width, curSize.height);
+            if (zoomStr > 0 && dist > maxRadius) {
+              // Zooming IN (Flight Forward) -> Respawn at center
+              p.x = centerX + (Math.random() - 0.5) * 50;
+              p.y = centerY + (Math.random() - 0.5) * 50;
+              p.vx = 0; p.vy = 0;
+            } else if (zoomStr < 0 && dist < 10) {
+              // Zooming OUT (Backward) -> Respawn at edges
+              const angle = Math.random() * Math.PI * 2;
+              p.x = centerX + Math.cos(angle) * maxRadius * 0.8;
+              p.y = centerY + Math.sin(angle) * maxRadius * 0.8;
+              p.vx = 0; p.vy = 0;
+            }
+          }
+
           if (p.x < 0) p.x = curSize.width; if (p.x > curSize.width) p.x = 0;
           if (p.y < 0) p.y = curSize.height; if (p.y > curSize.height) p.y = 0;
           
@@ -2704,6 +2732,10 @@ function App() {
               <div className="control-group">
                 <label>Spin Speed <span>{params.cymaticsSpin.toFixed(2)}</span></label>
                 <input type="range" min="-2.0" max="2.0" step="0.01" value={params.cymaticsSpin} onChange={(e) => updateParam('cymaticsSpin', parseFloat(e.target.value))} />
+              </div>
+              <div className="control-group">
+                <label>Flight Speed (Zoom) <span>{params.cymaticsZoom.toFixed(2)}</span></label>
+                <input type="range" min="-5.0" max="5.0" step="0.05" value={params.cymaticsZoom} onChange={(e) => updateParam('cymaticsZoom', parseFloat(e.target.value))} />
               </div>
             </div>
           </>
