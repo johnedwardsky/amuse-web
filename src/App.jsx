@@ -540,6 +540,30 @@ function App() {
     }
   };
 
+  const handleCymaticsShuffle = () => {
+    // 1. Randomize Geometry Parameters
+    const newN = Math.floor(2 + Math.random() * 14);
+    const newM = Math.floor(2 + Math.random() * 14);
+    setParams(prev => ({
+      ...prev,
+      cymaticsN: newN,
+      cymaticsM: newM
+    }));
+
+    // 2. Randomize Particles
+    if (cymaticsParticles.current && canvasSizeRef.current) {
+      const { width, height } = canvasSizeRef.current;
+      cymaticsParticles.current.forEach(p => {
+        p.x = Math.random() * width;
+        p.y = Math.random() * height;
+        p.vx = 0;
+        p.vy = 0;
+        // Also shuffle bands for new color clusters
+        p.band = Math.floor(Math.random() * 7);
+      });
+    }
+  };
+
   const handleAudioUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -2619,6 +2643,12 @@ function App() {
                   style={{ fontSize: '10px' }}
                 >
                   {params.cymaticsOilMode ? '🖼️ Art Freeze ON' : '🖼️ Art Freeze OFF'}
+                </button>
+                <button 
+                  onClick={handleCymaticsShuffle}
+                  style={{ fontSize: '10px', background: 'rgba(255,255,255,0.1)' }}
+                >
+                  🎲 Shuffle
                 </button>
               </div>
 
