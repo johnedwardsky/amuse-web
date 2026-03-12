@@ -969,98 +969,70 @@ function App() {
           }
         }
       } else {
-        // --- PARTICLE MODE: Sand Simulation ---
-        cymaticsParticles.current.forEach(p => {
-          const nx = (p.x / curSize.width) - 0.5;
-          const ny = (p.y / curSize.height) - 0.5;
-          
-          // In Rainbow Mode, particle only reacts to its assigned frequency band
-          const val = curParams.cymaticsRainbowMode 
-            ? getChladniValForBand(nx, ny, p.band)
-            : getChladniValSum(nx, ny);
+        // --- PARTICLE MODE: Optimized Sand Simulation ---
+        const friction = curParams.cymaticsOilMode ? 0.98 : (curParams.cymaticsFriction || 0.95);
+        const baseSpeed = curParams.cymaticsSpeed || 0.5;
+        const rLimit = Math.min(curSize.width, curSize.height) * 0.48;
+        const rLimitSq = rLimit * rLimit;
+        const zoomV = curParams.cymaticsZoom * 0.01;
 
-          const eps = 0.01;
-          const getValAt = (ox, oy) => curParams.cymaticsRainbowMode 
-            ? getChladniValForBand(ox, oy, p.band)
-            : getChladniValSum(ox, oy);
+        for (let b = 0; b < 7; b++) {
+          const h = bandParams[b] || { env: 0, transient: 0 };
+          const curSpeed = curParams.cymaticsOilMode ? (0.1 + h.transient * 2.0) : (baseSpeed + h.transient * 15.0);
+          const curJitter = curParams.cymaticsOilMode ? 0.1 : (0.3 + h.transient * 5.0);
+          const pS = curParams.cymaticsOilMode ? (3 + h.env * 6) : (1.5 + h.env * 1.5);
+          
+          ctx.fillStyle = getParticleColor({ x: 0, y: 0, band: b }, undefined);
+          if (curParams.cymaticsOilMode) ctx.globalAlpha = 0.3;
 
-          const valDX = getValAt(nx + eps, ny) - val;
-          const valDY = getValAt(nx, ny + eps) - val;
-          
-          const h = bandParams[p.band] || { env: 0, transient: 0 };
-          const force = Math.abs(val);
-          
-          // Oil mode: sluggish movement, higher friction
-          const oilFriction = 0.98;
-          const oilSpeed = 0.1;
-          
-          const activeFriction = curParams.cymaticsOilMode ? oilFriction : friction;
-          const activeSpeed = curParams.cymaticsOilMode 
-            ? (oilSpeed + h.transient * 2.0)
-            : (baseSpeed + (h.transient * 15.0));
+          const pGroup = cymaticsParticles.current.filter(p => b === p.band);
+          pGroup.forEach(p => {
+            const nx = (p.x / curSize.width) - 0.5;
+            const ny = (p.y / curSize.height) - 0.5;
+            const val = curParams.cymaticsRainbowMode ? getChladniValForBand(nx, ny, b) : getChladniValSum(nx, ny);
+            const eps = 0.01;
+            const vDX = (curParams.cymaticsRainbowMode ? getChladniValForBand(nx+eps, ny, b) : getChladniValSum(nx+eps, ny)) - val;
+            const vDY = (curParams.cymaticsRainbowMode ? getChladniValForBand(nx, ny+eps, b) : getChladniValSum(nx, ny+eps)) - val;
             
-          const activeJitter = curParams.cymaticsOilMode ? 0.1 : (0.3 + (h.transient * 5.0));
-          
-          p.vx = p.vx * activeFriction + (valDX > 0 ? -1 : 1) * force * activeSpeed + (Math.random() - 0.5) * activeJitter;
-          p.vy = p.vy * activeFriction + (valDY > 0 ? -1 : 1) * force * activeSpeed + (Math.random() - 0.5) * activeJitter;
-          p.x += p.vx; p.y += p.vy;
+            p.vx = p.vx * friction + (vDX > 0 ? -1 : 1) * Math.abs(val) * curSpeed + (Math.random() - 0.5) * curJitter;
+            p.vy = p.vy * friction + (vDY > 0 ? -1 : 1) * Math.abs(val) * curSpeed + (Math.random() - 0.5) * curJitter;
+            p.x += p.vx; p.y += p.vy;
 
-          // --- FLIGHT / ZOOM EFFECT ---
-          if (curParams.cymaticsZoom !== 0) {
-            const dx = p.x - centerX;
-            const dy = p.y - centerY;
-            const dist = Math.sqrt(dx*dx + dy*dy);
-            const zoomStr = curParams.cymaticsZoom * 0.01;
-            
-            p.x += dx * zoomStr;
-            p.y += dy * zoomStr;
-
-            // Wrap particles for continuous tunnel effect
-            const maxRadius = Math.max(curSize.width, curSize.height);
-            if (zoomStr > 0 && dist > maxRadius) {
-              // Zooming IN (Flight Forward) -> Respawn at center
-              p.x = centerX + (Math.random() - 0.5) * 50;
-              p.y = centerY + (Math.random() - 0.5) * 50;
-              p.vx = 0; p.vy = 0;
-            } else if (zoomStr < 0 && dist < 10) {
-              // Zooming OUT (Backward) -> Respawn at edges
-              const angle = Math.random() * Math.PI * 2;
-              p.x = centerX + Math.cos(angle) * maxRadius * 0.8;
-              p.y = centerY + Math.sin(angle) * maxRadius * 0.8;
-              p.vx = 0; p.vy = 0;
+            if (zoomV !== 0) {
+              const dx = p.x - centerX, dy = p.y - centerY;
+              p.x += dx * zoomV; p.y += dy * zoomV;
+              const dSq = dx*dx + dy*dy;
+              if (zoomV > 0 && dSq > rLimitSq * 2.5) {
+                p.x = centerX + (Math.random()-0.5)*40; p.y = centerY + (Math.random()-0.5)*40;
+                p.vx = 0; p.vy = 0;
+              } else if (zoomV < 0 && dSq < 100) {
+                const a = Math.random()*6.28;
+                p.x = centerX + Math.cos(a)*rLimit; p.y = centerY + Math.sin(a)*rLimit;
+                p.vx = 0; p.vy = 0;
+              }
             }
-          }
 
-          if (curParams.cymaticsCircular) {
-             const dx = p.x - centerX;
-             const dy = p.y - centerY;
-             const dist = Math.sqrt(dx*dx + dy*dy);
-             const r = Math.min(curSize.width, curSize.height) * 0.48;
-             if (dist > r) {
-                const angle = Math.atan2(dy, dx);
-                p.x = centerX + Math.cos(angle + Math.PI) * r * 0.98;
-                p.y = centerY + Math.sin(angle + Math.PI) * r * 0.98;
-                p.vx *= -0.5; p.vy *= -0.5;
-             }
-          } else {
-            if (p.x < 0) p.x = curSize.width; if (p.x > curSize.width) p.x = 0;
-            if (p.y < 0) p.y = curSize.height; if (p.y > curSize.height) p.y = 0;
-          }
-          
-          ctx.fillStyle = getParticleColor(p);
-          if (curParams.cymaticsOilMode) {
-             // Oil stroke: larger, translucent "brush"
-             const strokeSize = 3 + (h.env * 6);
-             ctx.globalAlpha = 0.3;
-             ctx.beginPath();
-             ctx.arc(p.x, p.y, strokeSize, 0, Math.PI * 2);
-             ctx.fill();
-             ctx.globalAlpha = 1.0;
-          } else {
-             const pSize = 1.5 + (h.env * 1.5);
-             ctx.fillRect(p.x, p.y, pSize, pSize);
-          }
-        });
+            if (curParams.cymaticsCircular) {
+               const dx = p.x - centerX, dy = p.y - centerY;
+               if (dx*dx + dy*dy > rLimitSq) {
+                  const a = Math.atan2(dy, dx);
+                  p.x = centerX + Math.cos(a + 3.141) * rLimit * 0.98;
+                  p.y = centerY + Math.sin(a + 3.141) * rLimit * 0.98;
+                  p.vx *= -0.2; p.vy *= -0.2;
+               }
+            } else {
+              if (p.x < 0) p.x = curSize.width; else if (p.x > curSize.width) p.x = 0;
+              if (p.y < 0) p.y = curSize.height; else if (p.y > curSize.height) p.y = 0;
+            }
+            
+            if (curParams.cymaticsOilMode) {
+               ctx.beginPath(); ctx.arc(p.x, p.y, pS, 0, 6.28); ctx.fill();
+            } else {
+               ctx.fillRect(p.x, p.y, pS, pS);
+            }
+          });
+          ctx.globalAlpha = 1.0;
+        }
       }
 
       if (curParams.cymaticsSpin !== 0 || curParams.cymaticsCircular) {
