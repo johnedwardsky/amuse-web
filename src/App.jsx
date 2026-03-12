@@ -95,7 +95,6 @@ const INITIAL_PARAMS = {
   cymaticsFriction: 0.95,
   cymaticsSpeed: 0.5,
   cymaticsFieldMode: false, // Grid/Field view
-  cymaticsGlow: true,       // Neon shader-like glow
   cymaticsRainbowMode: true // Multi-band spectral coloring
 };
 
@@ -853,12 +852,7 @@ function App() {
         }
       };
 
-      if (curParams.cymaticsGlow) {
-        ctx.shadowBlur = curParams.cymaticsFieldMode ? 10 : 4;
-        ctx.shadowColor = curParams.penStyle === PEN_STYLES.BLUE ? '#00f0ff' : '#fff';
-      } else {
-        ctx.shadowBlur = 0;
-      }
+      ctx.shadowBlur = 0;
 
       if (curParams.cymaticsFieldMode) {
         // --- FIELD MODE: Geometric Grid (Modeling the medium) ---
@@ -2576,13 +2570,6 @@ function App() {
                   style={{ fontSize: '10px' }}
                 >
                   {params.cymaticsFieldMode ? '💠 Grid Field' : '⏳ Particle Sand'}
-                </button>
-                <button 
-                  className={params.cymaticsGlow ? 'active' : ''}
-                  onClick={() => updateParam('cymaticsGlow', !params.cymaticsGlow)}
-                  style={{ fontSize: '10px' }}
-                >
-                  {params.cymaticsGlow ? '✨ Glow ON' : '🌑 Glow OFF'}
                 </button>
                 <button 
                   className={params.cymaticsRainbowMode ? 'active' : ''}
