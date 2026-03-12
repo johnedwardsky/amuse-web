@@ -99,7 +99,8 @@ const INITIAL_PARAMS = {
   cymaticsGhostMode: false,   // Trailing/Shadow effect
   cymaticsOilMode: false,      // Art/Oil painting effect
   cymaticsSpin: 0,            // Rotation speed
-  cymaticsZoom: 0             // Flight/Zoom speed
+  cymaticsZoom: 0,            // Flight/Zoom speed
+  cymaticsCircular: false     // Circular canvas/plate
 };
 
 function App() {
@@ -799,13 +800,26 @@ function App() {
       // --- CYMATICS RENDERING (Chladni Particles) ---
       const partCount = curParams.cymaticsParticleCount || 10000;
       if (cymaticsParticles.current.length !== partCount) {
-        cymaticsParticles.current = Array.from({ length: partCount }, (_, i) => ({
-          x: Math.random() * curSize.width,
-          y: Math.random() * curSize.height,
-          vx: 0,
-          vy: 0,
-          band: i % 7 // Assign each particle to one of 7 spectral bands
-        }));
+        const rad = Math.min(curSize.width, curSize.height) / 2;
+        cymaticsParticles.current = Array.from({ length: partCount }, (_, i) => {
+          let px, py;
+          if (curParams.cymaticsCircular) {
+            const a = Math.random() * Math.PI * 2;
+            const r = Math.sqrt(Math.random()) * rad;
+            px = centerX + Math.cos(a) * r;
+            py = centerY + Math.sin(a) * r;
+          } else {
+            px = Math.random() * curSize.width;
+            py = Math.random() * curSize.height;
+          }
+          return {
+            x: px,
+            y: py,
+            vx: 0,
+            vy: 0,
+            band: i % 7
+          };
+        });
       }
 
       let bandParams = []; // Parameters for each of the 7 bands
@@ -868,6 +882,15 @@ function App() {
         const clearAlpha = curParams.cymaticsOilMode ? 0 : (curParams.cymaticsGhostMode ? 0.04 : 0.15);
         ctx.fillStyle = curParams.theme === 'noir' ? `rgba(0,0,0,${clearAlpha})` : `rgba(5,5,8,${clearAlpha})`;
         ctx.fillRect(0, 0, curSize.width, curSize.height);
+      }
+
+      // --- CIRCULAR CLIP ---
+      if (curParams.cymaticsCircular) {
+        ctx.save();
+        ctx.beginPath();
+        const r = Math.min(curSize.width, curSize.height) * 0.48;
+        ctx.arc(centerX, centerY, r, 0, Math.PI * 2);
+        ctx.clip();
       }
 
       // --- SPIN LOGIC ---
@@ -1008,8 +1031,21 @@ function App() {
             }
           }
 
-          if (p.x < 0) p.x = curSize.width; if (p.x > curSize.width) p.x = 0;
-          if (p.y < 0) p.y = curSize.height; if (p.y > curSize.height) p.y = 0;
+          if (curParams.cymaticsCircular) {
+             const dx = p.x - centerX;
+             const dy = p.y - centerY;
+             const dist = Math.sqrt(dx*dx + dy*dy);
+             const r = Math.min(curSize.width, curSize.height) * 0.48;
+             if (dist > r) {
+                const angle = Math.atan2(dy, dx);
+                p.x = centerX + Math.cos(angle + Math.PI) * r * 0.98;
+                p.y = centerY + Math.sin(angle + Math.PI) * r * 0.98;
+                p.vx *= -0.5; p.vy *= -0.5;
+             }
+          } else {
+            if (p.x < 0) p.x = curSize.width; if (p.x > curSize.width) p.x = 0;
+            if (p.y < 0) p.y = curSize.height; if (p.y > curSize.height) p.y = 0;
+          }
           
           ctx.fillStyle = getParticleColor(p);
           if (curParams.cymaticsOilMode) {
@@ -1027,7 +1063,7 @@ function App() {
         });
       }
 
-      if (curParams.cymaticsSpin !== 0) {
+      if (curParams.cymaticsSpin !== 0 || curParams.cymaticsCircular) {
         ctx.restore();
       }
       
@@ -2697,6 +2733,13 @@ function App() {
                   style={{ fontSize: '10px' }}
                 >
                   {params.cymaticsOilMode ? '🖼️ Art Freeze ON' : '🖼️ Art Freeze OFF'}
+                </button>
+                <button 
+                  className={params.cymaticsCircular ? 'active' : ''}
+                  onClick={() => updateParam('cymaticsCircular', !params.cymaticsCircular)}
+                  style={{ fontSize: '10px' }}
+                >
+                  {params.cymaticsCircular ? '⚪ Circle ON' : '⬜ Circle OFF'}
                 </button>
                 <button 
                   onClick={handleCymaticsShuffle}
