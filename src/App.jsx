@@ -96,6 +96,7 @@ const INITIAL_PARAMS = {
   cymaticsSpeed: 0.5,
   cymaticsFieldMode: false, // Grid/Field view
   cymaticsGlow: true,       // Neon shader-like glow
+  cymaticsRainbowMode: true // Multi-band spectral coloring
 };
 
 function App() {
@@ -757,15 +758,16 @@ function App() {
       // --- CYMATICS RENDERING (Chladni Particles) ---
       const partCount = curParams.cymaticsParticleCount || 10000;
       if (cymaticsParticles.current.length !== partCount) {
-        cymaticsParticles.current = Array.from({ length: partCount }, () => ({
+        cymaticsParticles.current = Array.from({ length: partCount }, (_, i) => ({
           x: Math.random() * curSize.width,
           y: Math.random() * curSize.height,
           vx: 0,
-          vy: 0
+          vy: 0,
+          band: i % 7 // Assign each particle to one of 7 spectral bands
         }));
       }
 
-      let harmonics = [];
+      let bandParams = []; // Parameters for each of the 7 bands
       const sensitivity = curParams.cymaticsSensitivity || 1.5;
       const friction = curParams.cymaticsFriction || 0.95;
       const speed = curParams.cymaticsSpeed || 0.5;
@@ -775,54 +777,54 @@ function App() {
         const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
         analyserRef.current.getByteFrequencyData(dataArray);
         
-        // Pick 4 dominant harmonic regions
-        const regions = [
-          { start: 1, end: 8, weight: 1.0 },   // Bass
-          { start: 8, end: 32, weight: 0.8 },  // Low mid
-          { start: 32, end: 64, weight: 0.6 }, // High mid
-          { start: 64, end: 128, weight: 0.4 } // Highs
+        // Split spectrum into 7 logical bands: Bass -> Mids -> Highs
+        const ranges = [
+          { s: 1, e: 4, color: '#8b0000', weight: 1.2 },  // Deep Maroon (Sub)
+          { s: 4, e: 10, color: '#ff0000', weight: 1.1 }, // Red (Bass)
+          { s: 10, e: 25, color: '#ff8c00', weight: 1.0 }, // Orange (Rhythm)
+          { s: 25, e: 50, color: '#00ff00', weight: 0.9 }, // Green (Vocals/Lead)
+          { s: 50, e: 100, color: '#00ffff', weight: 0.8 }, // Cyan (Pad/Atmosphere)
+          { s: 100, e: 180, color: '#0000ff', weight: 0.7 }, // Blue (High keys)
+          { s: 180, e: 250, color: '#8b00ff', weight: 0.6 } // Violet (Air/Cymbals)
         ];
 
-        regions.forEach(region => {
+        bandParams = ranges.map((r, idx) => {
           let maxVal = 0;
           let maxIdx = 0;
-          for (let i = region.start; i < region.end; i++) {
+          for (let i = r.s; i < r.e; i++) {
             if (dataArray[i] > maxVal) {
               maxVal = dataArray[i];
               maxIdx = i;
             }
           }
-          if (maxVal > 30) {
-            harmonics.push({
-              n: 1 + (maxIdx % 12),
-              m: 1 + (Math.floor(maxIdx / 6) % 12),
-              amp: (maxVal / 255) * region.weight * sensitivity
-            });
-          }
+          const amp = (maxVal / 255) * r.weight * sensitivity;
+          return {
+            n: 1 + (maxIdx % (5 + idx * 2)), 
+            m: 1 + (Math.floor(maxIdx / 4) % (4 + idx * 2)),
+            amp: amp,
+            color: r.color
+          };
         });
-      }
-
-      // Fallback if no audio
-      if (harmonics.length === 0) {
-        harmonics.push({ n: curParams.cymaticsN, m: curParams.cymaticsM, amp: 1.0 });
       }
 
       ctx.fillStyle = curParams.theme === 'noir' ? 'rgba(0,0,0,0.15)' : 'rgba(5,5,8,0.15)';
       ctx.fillRect(0, 0, curSize.width, curSize.height);
 
-      const getChladniVal = (nx, ny) => {
-        let total = 0;
-        harmonics.forEach(h => {
-          total += h.amp * (Math.cos(h.n * Math.PI * nx) * Math.cos(h.m * Math.PI * ny) - 
-                           Math.cos(h.m * Math.PI * nx) * Math.cos(h.n * Math.PI * ny));
-        });
-        return total;
+      const getChladniValForBand = (nx, ny, bandIdx) => {
+        const h = bandParams[bandIdx] || { n: curParams.cymaticsN, m: curParams.cymaticsM, amp: 1.0 };
+        return h.amp * (Math.cos(h.n * Math.PI * nx) * Math.cos(h.m * Math.PI * ny) - 
+                        Math.cos(h.m * Math.PI * nx) * Math.cos(h.n * Math.PI * ny));
       };
 
       const getParticleColor = (p, overrideVal) => {
         const nx = p.x / curSize.width;
         const ny = p.y / curSize.height;
         const baseVal = overrideVal !== undefined ? overrideVal : 1.0;
+        
+        if (curParams.cymaticsRainbowMode && bandParams[p.band]) {
+          return `${bandParams[p.band].color}${Math.floor((0.3 + baseVal * 0.7) * 255).toString(16).padStart(2, '0')}`;
+        }
+
         switch (curParams.penStyle) {
           case PEN_STYLES.RAINBOW: return `hsla(${(nx + ny) * 360 + frameCount.current}, 70%, 60%, ${baseVal})`;
           case PEN_STYLES.BLUE: return `rgba(0, ${150 + nx * 105}, 255, ${0.4 + baseVal * 0.6})`;
@@ -871,10 +873,27 @@ function App() {
           const nx = (p.x / curSize.width) - 0.5;
           const ny = (p.y / curSize.height) - 0.5;
           
-          const val = getChladniVal(nx, ny);
+          // In Rainbow Mode, particle only reacts to its assigned frequency band
+          const val = curParams.cymaticsRainbowMode 
+            ? getChladniValForBand(nx, ny, p.band)
+            : (() => { 
+                // Summed harmonics for normal mode
+                let t = 0;
+                bandParams.forEach(h => t += h.amp * (Math.cos(h.n * Math.PI * nx) * Math.cos(h.m * Math.PI * ny) - Math.cos(h.m * Math.PI * nx) * Math.cos(h.n * Math.PI * ny)));
+                return t;
+              })();
+
           const eps = 0.01;
-          const valDX = getChladniVal(nx + eps, ny) - val;
-          const valDY = getChladniVal(nx, ny + eps) - val;
+          const getValAt = (ox, oy) => curParams.cymaticsRainbowMode 
+            ? getChladniValForBand(ox, oy, p.band)
+            : (() => { 
+                let t = 0;
+                bandParams.forEach(h => t += h.amp * (Math.cos(h.n * Math.PI * ox) * Math.cos(h.m * Math.PI * oy) - Math.cos(h.m * Math.PI * ox) * Math.cos(h.n * Math.PI * oy)));
+                return t;
+              })();
+
+          const valDX = getValAt(nx + eps, ny) - val;
+          const valDY = getValAt(nx, ny + eps) - val;
           
           const force = Math.abs(val);
           p.vx = p.vx * friction + (valDX > 0 ? -1 : 1) * force * speed + (Math.random() - 0.5) * jitter;
@@ -2540,6 +2559,13 @@ function App() {
                   style={{ fontSize: '10px' }}
                 >
                   {params.cymaticsGlow ? '✨ Glow ON' : '🌑 Glow OFF'}
+                </button>
+                <button 
+                  className={params.cymaticsRainbowMode ? 'active' : ''}
+                  onClick={() => updateParam('cymaticsRainbowMode', !params.cymaticsRainbowMode)}
+                  style={{ fontSize: '10px' }}
+                >
+                  {params.cymaticsRainbowMode ? '🌈 Spectral' : '⚪ Static'}
                 </button>
               </div>
 
