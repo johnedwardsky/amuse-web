@@ -97,7 +97,7 @@ const INITIAL_PARAMS = {
   cymaticsFieldMode: false, // Grid/Field view
   cymaticsRainbowMode: true, // Multi-band spectral coloring
   cymaticsGhostMode: false,   // Trailing/Shadow effect
-  cymaticsNebulaMode: true    // Atmospheric smoke/nebula effect
+  cymaticsOilMode: false      // Art/Oil painting effect
 };
 
 function App() {
@@ -164,7 +164,6 @@ function App() {
   const waveformPeaksRef = useRef([]); // Pre-computed amplitude peaks for full waveform
   const waveformDraggingRef = useRef(false);
   const cymaticsEnvelopesRef = useRef(new Array(7).fill(0)); // Energy tracking for 7 bands
-  const cymaticsNebulaPosRef = useRef(new Array(7).fill(0).map(() => ({ x: Math.random(), y: Math.random(), vx: 0.001, vy: 0.001 }))); 
 
   const [cymaticsTrackName, setCymaticsTrackName] = useState(null);
   const [cymaticsDuration, setCymaticsDuration] = useState(0);
@@ -826,36 +825,10 @@ function App() {
         });
       }
 
-      const clearAlpha = curParams.cymaticsGhostMode ? 0.04 : 0.15;
-      ctx.fillStyle = curParams.theme === 'noir' ? `rgba(0,0,0,${clearAlpha})` : `rgba(5,5,8,${clearAlpha})`;
-      ctx.fillRect(0, 0, curSize.width, curSize.height);
-
-      // --- NEBULA MODE: Atmospheric Smoke Layer ---
-      if (curParams.cymaticsNebulaMode) {
-        ctx.save();
-        ctx.globalCompositeOperation = 'screen';
-        bandParams.forEach((h, idx) => {
-          if (h.env > 0.05) {
-            const pos = cymaticsNebulaPosRef.current[idx];
-            // Slow drift
-            pos.x += pos.vx; pos.y += pos.vy;
-            if (pos.x < 0 || pos.x > 1) pos.vx *= -1;
-            if (pos.y < 0 || pos.y > 1) pos.vy *= -1;
-
-            const wx = pos.x * curSize.width;
-            const wy = pos.y * curSize.height;
-            const radius = (200 + h.env * 400) * (2 - idx/7); // Bass is larger
-            
-            const grad = ctx.createRadialGradient(wx, wy, 0, wx, wy, radius);
-            const alpha = h.env * 0.12;
-            grad.addColorStop(0, `${h.color}${Math.floor(alpha * 255).toString(16).padStart(2, '0')}`);
-            grad.addColorStop(1, 'transparent');
-            
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, curSize.width, curSize.height);
-          }
-        });
-        ctx.restore();
+      const clearAlpha = curParams.cymaticsOilMode ? 0 : (curParams.cymaticsGhostMode ? 0.04 : 0.15);
+      if (clearAlpha > 0) {
+        ctx.fillStyle = curParams.theme === 'noir' ? `rgba(0,0,0,${clearAlpha})` : `rgba(5,5,8,${clearAlpha})`;
+        ctx.fillRect(0, 0, curSize.width, curSize.height);
       }
 
       const getChladniValForBand = (nx, ny, bandIdx) => {
@@ -945,18 +918,37 @@ function App() {
           
           const h = bandParams[p.band] || { env: 0, transient: 0 };
           const force = Math.abs(val);
-          // Speed and Jitter react to transients (beats) for sharp rhythm
-          const activeSpeed = baseSpeed + (h.transient * 15.0);
-          const activeJitter = 0.3 + (h.transient * 5.0);
           
-          p.vx = p.vx * friction + (valDX > 0 ? -1 : 1) * force * activeSpeed + (Math.random() - 0.5) * activeJitter;
-          p.vy = p.vy * friction + (valDY > 0 ? -1 : 1) * force * activeSpeed + (Math.random() - 0.5) * activeJitter;
+          // Oil mode: sluggish movement, higher friction
+          const oilFriction = 0.98;
+          const oilSpeed = 0.1;
+          
+          const activeFriction = curParams.cymaticsOilMode ? oilFriction : friction;
+          const activeSpeed = curParams.cymaticsOilMode 
+            ? (oilSpeed + h.transient * 2.0)
+            : (baseSpeed + (h.transient * 15.0));
+            
+          const activeJitter = curParams.cymaticsOilMode ? 0.1 : (0.3 + (h.transient * 5.0));
+          
+          p.vx = p.vx * activeFriction + (valDX > 0 ? -1 : 1) * force * activeSpeed + (Math.random() - 0.5) * activeJitter;
+          p.vy = p.vy * activeFriction + (valDY > 0 ? -1 : 1) * force * activeSpeed + (Math.random() - 0.5) * activeJitter;
           p.x += p.vx; p.y += p.vy;
           if (p.x < 0) p.x = curSize.width; if (p.x > curSize.width) p.x = 0;
           if (p.y < 0) p.y = curSize.height; if (p.y > curSize.height) p.y = 0;
+          
           ctx.fillStyle = getParticleColor(p);
-          const pSize = 1.5 + (h.env * 1.5); // Pulse with volume
-          ctx.fillRect(p.x, p.y, pSize, pSize);
+          if (curParams.cymaticsOilMode) {
+             // Oil stroke: larger, translucent "brush"
+             const strokeSize = 3 + (h.env * 6);
+             ctx.globalAlpha = 0.3;
+             ctx.beginPath();
+             ctx.arc(p.x, p.y, strokeSize, 0, Math.PI * 2);
+             ctx.fill();
+             ctx.globalAlpha = 1.0;
+          } else {
+             const pSize = 1.5 + (h.env * 1.5);
+             ctx.fillRect(p.x, p.y, pSize, pSize);
+          }
         });
       }
       
@@ -2622,11 +2614,11 @@ function App() {
                   {params.cymaticsGhostMode ? '👻 Ghost ON' : '👻 Ghost OFF'}
                 </button>
                 <button 
-                  className={params.cymaticsNebulaMode ? 'active' : ''}
-                  onClick={() => updateParam('cymaticsNebulaMode', !params.cymaticsNebulaMode)}
+                  className={params.cymaticsOilMode ? 'active' : ''}
+                  onClick={() => updateParam('cymaticsOilMode', !params.cymaticsOilMode)}
                   style={{ fontSize: '10px' }}
                 >
-                  {params.cymaticsNebulaMode ? '☁️ Nebula ON' : '☁️ Nebula OFF'}
+                  {params.cymaticsOilMode ? '🖼️ Art Freeze ON' : '🖼️ Art Freeze OFF'}
                 </button>
               </div>
 
