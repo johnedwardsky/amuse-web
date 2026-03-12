@@ -24,6 +24,7 @@ const BRIGHTNESS_MODES = {
 
 const MODES = {
   ORIGINAL: 'Linkage (Original Math)',
+  CYMATICS: 'Cymatics (Chladni Plate)',
 };
 
 const INITIAL_PARAMS = {
@@ -85,6 +86,16 @@ const INITIAL_PARAMS = {
   livedraw: true,
   cutpixels: true,
   autoStop: true, // NEW: Stop when pattern is complete
+
+  // Cymatics Params
+  cymaticsN: 3,
+  cymaticsM: 2,
+  cymaticsSensitivity: 1.5,
+  cymaticsParticleCount: 15000,
+  cymaticsFriction: 0.95,
+  cymaticsSpeed: 0.5,
+  cymaticsFieldMode: false, // Grid/Field view
+  cymaticsGlow: true,       // Neon shader-like glow
 };
 
 function App() {
@@ -113,7 +124,8 @@ function App() {
     spiroSynth: true,
     sonicEQ: true,
     genPerf: true,
-    gallery: false // Expanded by default
+    gallery: false, // Expanded by default
+    cymaticsLab: false // Expanded by default
   });
 
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -138,6 +150,36 @@ function App() {
   // Auto-chord progression system
   const lastAutoChordTime = useRef(0);
   const autoChordInterval = useRef(6 + Math.random() * 2); // 6-8 seconds
+
+  // Cymatics Refs
+  const cymaticsParticles = useRef([]);
+  const analyserRef = useRef(null);
+  const audioSourceRef = useRef(null);
+  const cymaticsAudioBufferRef = useRef(null);
+  const cymaticsStartTimeRef = useRef(0);
+  const cymaticsOffsetRef = useRef(0);
+  const waveformCanvasRef = useRef(null);
+  const waveformPeaksRef = useRef([]); // Pre-computed amplitude peaks for full waveform
+  const waveformDraggingRef = useRef(false);
+
+  const [cymaticsTrackName, setCymaticsTrackName] = useState(null);
+  const [cymaticsDuration, setCymaticsDuration] = useState(0);
+  const [cymaticsCurrentTime, setCymaticsCurrentTime] = useState(0);
+  const [cymaticsPlaying, setCymaticsPlaying] = useState(false);
+  const cymaticsPlayingRef = useRef(false);
+
+  // Poll current playback position every 250ms
+  useEffect(() => {
+    if (!cymaticsPlaying) return;
+    const id = setInterval(() => {
+      if (audioCtx.current && cymaticsPlayingRef.current) {
+        const elapsed = audioCtx.current.currentTime - cymaticsStartTimeRef.current;
+        const pos = Math.max(0, elapsed % (cymaticsDuration || 1));
+        setCymaticsCurrentTime(pos);
+      }
+    }, 250);
+    return () => clearInterval(id);
+  }, [cymaticsPlaying, cymaticsDuration]);
 
   useEffect(() => {
     isRunningRef.current = isRunning;
@@ -443,6 +485,99 @@ function App() {
     }, 100);
   };
 
+  const cymaticsPlay = (offset = 0) => {
+    if (!cymaticsAudioBufferRef.current || !audioCtx.current) return;
+    if (audioSourceRef.current) {
+      try { audioSourceRef.current.stop(); } catch(e) {}
+    }
+    const source = audioCtx.current.createBufferSource();
+    source.buffer = cymaticsAudioBufferRef.current;
+    source.loop = true;
+
+    const analyser = audioCtx.current.createAnalyser();
+    analyser.fftSize = 256;
+    analyserRef.current = analyser;
+
+    // Route: Source -> Analyser -> Destination (AUDIBLE DRY)
+    source.connect(analyser);
+    analyser.connect(audioCtx.current.destination);
+
+    source.start(0, offset % cymaticsAudioBufferRef.current.duration);
+    audioSourceRef.current = source;
+    cymaticsStartTimeRef.current = audioCtx.current.currentTime - offset;
+    setCymaticsPlaying(true);
+    cymaticsPlayingRef.current = true;
+  };
+
+  const cymaticsPause = () => {
+    if (!audioSourceRef.current || !cymaticsPlayingRef.current) return;
+    cymaticsOffsetRef.current = audioCtx.current.currentTime - cymaticsStartTimeRef.current;
+    try { audioSourceRef.current.stop(); } catch(e) {}
+    audioSourceRef.current = null;
+    setCymaticsPlaying(false);
+    cymaticsPlayingRef.current = false;
+  };
+
+  const cymaticsStop = () => {
+    if (audioSourceRef.current) {
+      try { audioSourceRef.current.stop(); } catch(e) {}
+      audioSourceRef.current = null;
+    }
+    cymaticsOffsetRef.current = 0;
+    setCymaticsPlaying(false);
+    cymaticsPlayingRef.current = false;
+    setIsRunning(false);
+  };
+
+  const handleCymaticsSeek = (newTime) => {
+    cymaticsOffsetRef.current = newTime;
+    setCymaticsCurrentTime(newTime);
+    if (cymaticsPlayingRef.current) {
+      cymaticsPlay(newTime);
+    }
+  };
+
+  const handleAudioUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!audioCtx.current) initAudio();
+    if (audioCtx.current.state === 'suspended') audioCtx.current.resume();
+
+    // Stop previous source
+    if (audioSourceRef.current) {
+      try { audioSourceRef.current.stop(); } catch(e) {}
+      audioSourceRef.current = null;
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const audioBuffer = await audioCtx.current.decodeAudioData(arrayBuffer);
+    cymaticsAudioBufferRef.current = audioBuffer;
+    cymaticsOffsetRef.current = 0;
+    setCymaticsTrackName(file.name.replace(/\.[^.]+$/, ''));
+    setCymaticsDuration(audioBuffer.duration);
+
+    // Pre-compute waveform peaks (200 bars) for the seek visualizer
+    const channelData = audioBuffer.getChannelData(0);
+    const numPeaks = 200;
+    const blockSize = Math.floor(channelData.length / numPeaks);
+    const peaks = [];
+    for (let i = 0; i < numPeaks; i++) {
+      let max = 0;
+      for (let j = 0; j < blockSize; j++) {
+        const val = Math.abs(channelData[i * blockSize + j]);
+        if (val > max) max = val;
+      }
+      peaks.push(max);
+    }
+    waveformPeaksRef.current = peaks;
+
+    // Auto-switch & play
+    updateParam('mode', MODES.CYMATICS);
+    setIsRunning(true);
+    cymaticsPlay(0);
+  };
+
   // Update synth params live
   useEffect(() => {
     if (audioCtx.current) {
@@ -453,14 +588,16 @@ function App() {
       if (lfoOsc.current) lfoOsc.current.frequency.setTargetAtTime(params.synthLFOFreq, audioCtx.current.currentTime, 0.1);
       if (lfoGain.current) lfoGain.current.gain.setTargetAtTime(params.synthLFOAmount, audioCtx.current.currentTime, 0.1);
 
-      // LIVE MELODY VOLUME SYNC (works in all modes, Fragmented has its own gating)
+      // LIVE MELODY VOLUME SYNC
       if (gainNode.current) {
-        gainNode.current.gain.setTargetAtTime(params.synthMelodyVol, audioCtx.current.currentTime, 0.1);
+        const targetVol = params.mode === MODES.CYMATICS ? 0 : params.synthMelodyVol;
+        gainNode.current.gain.setTargetAtTime(targetVol, audioCtx.current.currentTime, 0.1);
       }
 
       // LIVE CHORD VOLUME SYNC
       if (chordGain.current) {
-        chordGain.current.gain.setTargetAtTime(params.synthChordVol, audioCtx.current.currentTime, 0.1);
+        const targetVol = params.mode === MODES.CYMATICS ? 0 : params.synthChordVol;
+        chordGain.current.gain.setTargetAtTime(targetVol, audioCtx.current.currentTime, 0.1);
       }
 
       // LIVE EQ & DRIVE SYNC
@@ -615,6 +752,190 @@ function App() {
     const AM = Math.PI / 180;
 
     const steps = Math.min(curParams.acceleration || 1, 500); // Cap acceleration for safety
+
+    if (curParams.mode === MODES.CYMATICS) {
+      // --- CYMATICS RENDERING (Chladni Particles) ---
+      const partCount = curParams.cymaticsParticleCount || 10000;
+      if (cymaticsParticles.current.length !== partCount) {
+        cymaticsParticles.current = Array.from({ length: partCount }, () => ({
+          x: Math.random() * curSize.width,
+          y: Math.random() * curSize.height,
+          vx: 0,
+          vy: 0
+        }));
+      }
+
+      let harmonics = [];
+      const sensitivity = curParams.cymaticsSensitivity || 1.5;
+      const friction = curParams.cymaticsFriction || 0.95;
+      const speed = curParams.cymaticsSpeed || 0.5;
+      const jitter = 0.5;
+
+      if (analyserRef.current && isRunningRef.current) {
+        const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
+        analyserRef.current.getByteFrequencyData(dataArray);
+        
+        // Pick 4 dominant harmonic regions
+        const regions = [
+          { start: 1, end: 8, weight: 1.0 },   // Bass
+          { start: 8, end: 32, weight: 0.8 },  // Low mid
+          { start: 32, end: 64, weight: 0.6 }, // High mid
+          { start: 64, end: 128, weight: 0.4 } // Highs
+        ];
+
+        regions.forEach(region => {
+          let maxVal = 0;
+          let maxIdx = 0;
+          for (let i = region.start; i < region.end; i++) {
+            if (dataArray[i] > maxVal) {
+              maxVal = dataArray[i];
+              maxIdx = i;
+            }
+          }
+          if (maxVal > 30) {
+            harmonics.push({
+              n: 1 + (maxIdx % 12),
+              m: 1 + (Math.floor(maxIdx / 6) % 12),
+              amp: (maxVal / 255) * region.weight * sensitivity
+            });
+          }
+        });
+      }
+
+      // Fallback if no audio
+      if (harmonics.length === 0) {
+        harmonics.push({ n: curParams.cymaticsN, m: curParams.cymaticsM, amp: 1.0 });
+      }
+
+      ctx.fillStyle = curParams.theme === 'noir' ? 'rgba(0,0,0,0.15)' : 'rgba(5,5,8,0.15)';
+      ctx.fillRect(0, 0, curSize.width, curSize.height);
+
+      const getChladniVal = (nx, ny) => {
+        let total = 0;
+        harmonics.forEach(h => {
+          total += h.amp * (Math.cos(h.n * Math.PI * nx) * Math.cos(h.m * Math.PI * ny) - 
+                           Math.cos(h.m * Math.PI * nx) * Math.cos(h.n * Math.PI * ny));
+        });
+        return total;
+      };
+
+      const getParticleColor = (p, overrideVal) => {
+        const nx = p.x / curSize.width;
+        const ny = p.y / curSize.height;
+        const baseVal = overrideVal !== undefined ? overrideVal : 1.0;
+        switch (curParams.penStyle) {
+          case PEN_STYLES.RAINBOW: return `hsla(${(nx + ny) * 360 + frameCount.current}, 70%, 60%, ${baseVal})`;
+          case PEN_STYLES.BLUE: return `rgba(0, ${150 + nx * 105}, 255, ${0.4 + baseVal * 0.6})`;
+          case PEN_STYLES.GOLDEN: return `rgba(255, ${150 + ny * 105}, 0, ${0.4 + baseVal * 0.6})`;
+          case PEN_STYLES.BW: return `rgba(255, 255, 255, ${0.1 + baseVal * 0.9})`;
+          case PEN_STYLES.HOLOGRAPHIC: return `hsla(${(nx - ny) * 360}, 100%, 75%, ${0.5 * baseVal})`;
+          default: return `rgba(255, 255, 255, ${baseVal})`;
+        }
+      };
+
+      if (curParams.cymaticsGlow) {
+        ctx.shadowBlur = curParams.cymaticsFieldMode ? 10 : 4;
+        ctx.shadowColor = curParams.penStyle === PEN_STYLES.BLUE ? '#00f0ff' : '#fff';
+      } else {
+        ctx.shadowBlur = 0;
+      }
+
+      if (curParams.cymaticsFieldMode) {
+        // --- FIELD MODE: Geometric Grid (Modeling the medium) ---
+        const spacing = 18;
+        const rows = Math.ceil(curSize.height / spacing);
+        const cols = Math.ceil(curSize.width / spacing);
+        
+        for (let r = 0; r <= rows; r++) {
+          for (let c = 0; c <= cols; c++) {
+            const x = c * spacing;
+            const y = r * spacing;
+            const nx = (x / curSize.width) - 0.5;
+            const ny = (y / curSize.height) - 0.5;
+            
+            const val = getChladniVal(nx, ny);
+            const intensity = Math.abs(val);
+            
+            if (intensity > 0.05) {
+              const size = intensity * 4;
+              ctx.fillStyle = getParticleColor({ x, y }, Math.min(1.0, intensity * 2));
+              ctx.beginPath();
+              ctx.arc(x, y, size, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        }
+      } else {
+        // --- PARTICLE MODE: Sand Simulation ---
+        cymaticsParticles.current.forEach(p => {
+          const nx = (p.x / curSize.width) - 0.5;
+          const ny = (p.y / curSize.height) - 0.5;
+          
+          const val = getChladniVal(nx, ny);
+          const eps = 0.01;
+          const valDX = getChladniVal(nx + eps, ny) - val;
+          const valDY = getChladniVal(nx, ny + eps) - val;
+          
+          const force = Math.abs(val);
+          p.vx = p.vx * friction + (valDX > 0 ? -1 : 1) * force * speed + (Math.random() - 0.5) * jitter;
+          p.vy = p.vy * friction + (valDY > 0 ? -1 : 1) * force * speed + (Math.random() - 0.5) * jitter;
+          p.x += p.vx; p.y += p.vy;
+          if (p.x < 0) p.x = curSize.width; if (p.x > curSize.width) p.x = 0;
+          if (p.y < 0) p.y = curSize.height; if (p.y > curSize.height) p.y = 0;
+          ctx.fillStyle = getParticleColor(p);
+          ctx.fillRect(p.x, p.y, 2, 2);
+        });
+      }
+      
+
+      // Draw STATIC waveform peaks over the full track + playhead
+      if (waveformCanvasRef.current && waveformPeaksRef.current.length > 0) {
+        const wfCanvas = waveformCanvasRef.current;
+        const wfCtx = wfCanvas.getContext('2d');
+        const W = wfCanvas.width;
+        const H = wfCanvas.height;
+        const peaks = waveformPeaksRef.current;
+        const progress = cymaticsDuration > 0
+          ? (audioCtx.current ? Math.max(0, (audioCtx.current.currentTime - cymaticsStartTimeRef.current)) % cymaticsDuration / cymaticsDuration : 0)
+          : 0;
+
+        wfCtx.clearRect(0, 0, W, H);
+        wfCtx.fillStyle = 'rgba(0,0,0,0.5)';
+        wfCtx.fillRect(0, 0, W, H);
+
+        const barW = W / peaks.length;
+        const playheadX = progress * W;
+
+        for (let i = 0; i < peaks.length; i++) {
+          const x = i * barW;
+          const barH = peaks[i] * H * 0.9;
+          const barY = (H - barH) / 2;
+          // Played portion: bright cyan; unplayed: dim
+          if (x < playheadX) {
+            wfCtx.fillStyle = `rgba(0,240,255,0.85)`;
+          } else {
+            wfCtx.fillStyle = `rgba(255,255,255,0.18)`;
+          }
+          wfCtx.fillRect(x + 0.5, barY, Math.max(1, barW - 1), barH);
+        }
+
+        // Playhead line
+        wfCtx.strokeStyle = '#ff00ff';
+        wfCtx.lineWidth = 2;
+        wfCtx.shadowColor = '#ff00ff';
+        wfCtx.shadowBlur = 6;
+        wfCtx.beginPath();
+        wfCtx.moveTo(playheadX, 0);
+        wfCtx.lineTo(playheadX, H);
+        wfCtx.stroke();
+        wfCtx.shadowBlur = 0;
+      }
+
+      if (isRunningRef.current) {
+        requestRef.current = requestAnimationFrame(draw);
+      }
+      return;
+    }
 
     for (let i = 0; i < steps; i++) {
       let effectiveParams = { ...curParams };
@@ -2086,6 +2407,13 @@ function App() {
         </div>
         <div className={`section-content ${collapsedSections['coreEngine'] ? 'collapsed' : ''}`}>
           <div className="control-group">
+            <label>Rendering Mode</label>
+            <select value={params.mode} onChange={(e) => updateParam('mode', e.target.value)}>
+              <option value={MODES.ORIGINAL}>Linkage (Spirograph)</option>
+              <option value={MODES.CYMATICS}>Cymatics (Chladni Plate)</option>
+            </select>
+          </div>
+          <div className="control-group">
             <label>Acceleration <span>{params.acceleration}</span></label>
             <input type="range" min="1" max="500" value={params.acceleration} onChange={(e) => updateParam('acceleration', parseInt(e.target.value))} />
           </div>
@@ -2113,6 +2441,128 @@ function App() {
             </button>
           </div>
         </div>
+
+        {/* SECTION: CYMATICS LAB */}
+        {params.mode === MODES.CYMATICS && (
+          <>
+            <div className={`section-title ${collapsedSections['cymaticsLab'] ? 'collapsed' : ''}`} onClick={() => toggleSection('cymaticsLab')}>
+              Cymatics Lab 🌊
+            </div>
+            <div className={`section-content ${collapsedSections['cymaticsLab'] ? 'collapsed' : ''}`}>
+
+              {/* File Upload */}
+              <div className="control-group">
+                <input 
+                  type="file" 
+                  accept="audio/*" 
+                  onChange={handleAudioUpload}
+                  id="audio-upload"
+                  style={{ display: 'none' }}
+                />
+                <button 
+                  onClick={() => document.getElementById('audio-upload').click()}
+                  style={{ width: '100%', background: 'linear-gradient(135deg, #00f0ff 0%, #ff00ff 100%)', color: '#000', fontWeight: 'bold', letterSpacing: '0.5px' }}
+                >
+                  🎵 {cymaticsTrackName ? 'Change Track' : 'Upload & Visualize'}
+                </button>
+              </div>
+
+              {/* Player */}
+              {cymaticsTrackName && (
+                <div className="cymatics-player">
+                  <div className="cymatics-track-name">♪ {cymaticsTrackName}</div>
+
+                  {/* Waveform Canvas — click or drag to seek */}
+                  <canvas
+                    ref={waveformCanvasRef}
+                    className="cymatics-waveform"
+                    width={220}
+                    height={60}
+                    style={{ cursor: 'pointer' }}
+                    onMouseDown={(e) => {
+                      waveformDraggingRef.current = true;
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const ratio = (e.clientX - rect.left) / rect.width;
+                      handleCymaticsSeek(Math.max(0, Math.min(1, ratio)) * cymaticsDuration);
+                    }}
+                    onMouseMove={(e) => {
+                      if (!waveformDraggingRef.current) return;
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const ratio = (e.clientX - rect.left) / rect.width;
+                      handleCymaticsSeek(Math.max(0, Math.min(1, ratio)) * cymaticsDuration);
+                    }}
+                    onMouseUp={() => { waveformDraggingRef.current = false; }}
+                    onMouseLeave={() => { waveformDraggingRef.current = false; }}
+                  />
+
+                  {/* Timer */}
+                  <div className="cymatics-timer">
+                    {(() => {
+                      const fmt = (t) => `${Math.floor(t/60).toString().padStart(2,'0')}:${Math.floor(t%60).toString().padStart(2,'0')}`;
+                      return `${fmt(cymaticsCurrentTime)} / ${fmt(cymaticsDuration)}`;
+                    })()}
+                  </div>
+
+                  {/* Controls */}
+                  <div className="cymatics-controls">
+                    <button
+                      className="cymatics-ctrl-btn"
+                      onClick={() => { cymaticsOffsetRef.current = 0; handleCymaticsSeek(0); }}
+                      title="Restart"
+                    >⏮</button>
+                    <button
+                      className="cymatics-ctrl-btn cymatics-play-btn"
+                      onClick={() => cymaticsPlaying ? cymaticsPause() : cymaticsPlay(cymaticsOffsetRef.current)}
+                    >
+                      {cymaticsPlaying ? '⏸' : '▶'}
+                    </button>
+                    <button
+                      className="cymatics-ctrl-btn"
+                      onClick={cymaticsStop}
+                      title="Stop"
+                    >⏹</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Advanced Modes */}
+              <div className="button-group grid-2" style={{ marginTop: '12px' }}>
+                <button 
+                  className={params.cymaticsFieldMode ? 'active' : ''}
+                  onClick={() => updateParam('cymaticsFieldMode', !params.cymaticsFieldMode)}
+                  style={{ fontSize: '10px' }}
+                >
+                  {params.cymaticsFieldMode ? '💠 Grid Field' : '⏳ Particle Sand'}
+                </button>
+                <button 
+                  className={params.cymaticsGlow ? 'active' : ''}
+                  onClick={() => updateParam('cymaticsGlow', !params.cymaticsGlow)}
+                  style={{ fontSize: '10px' }}
+                >
+                  {params.cymaticsGlow ? '✨ Glow ON' : '🌑 Glow OFF'}
+                </button>
+              </div>
+
+              {/* Cymatics Parameters */}
+              <div className="control-group" style={{ marginTop: '12px' }}>
+                <label>Sensitivity <span>{params.cymaticsSensitivity.toFixed(1)}</span></label>
+                <input type="range" min="0.1" max="5.0" step="0.1" value={params.cymaticsSensitivity} onChange={(e) => updateParam('cymaticsSensitivity', parseFloat(e.target.value))} />
+              </div>
+              <div className="control-group">
+                <label>N Parameter <span>{params.cymaticsN}</span></label>
+                <input type="range" min="1" max="20" step="1" value={params.cymaticsN} onChange={(e) => updateParam('cymaticsN', parseInt(e.target.value))} />
+              </div>
+              <div className="control-group">
+                <label>M Parameter <span>{params.cymaticsM}</span></label>
+                <input type="range" min="1" max="20" step="1" value={params.cymaticsM} onChange={(e) => updateParam('cymaticsM', parseInt(e.target.value))} />
+              </div>
+              <div className="control-group">
+                <label>Particle Count <span>{params.cymaticsParticleCount}</span></label>
+                <input type="range" min="1000" max="30000" step="1000" value={params.cymaticsParticleCount} onChange={(e) => updateParam('cymaticsParticleCount', parseInt(e.target.value))} />
+              </div>
+            </div>
+          </>
+        )}
 
         {/* SECTION: ARM BASE */}
         <div className={`section-title ${collapsedSections['armBase'] ? 'collapsed' : ''}`} onClick={() => toggleSection('armBase')}>

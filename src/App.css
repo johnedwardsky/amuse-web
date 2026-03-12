@@ -824,3 +824,140 @@ button:active {
         transform: scale(1);
     }
 }
+/* Cymatics Lab Styles */
+.cymatics-lab-section {
+    padding: 10px;
+    background: rgba(0, 240, 255, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(0, 240, 255, 0.1);
+    margin: 15px 0;
+}
+
+#audio-upload + button {
+    margin-top: 10px;
+}
+
+.cymatics-status {
+    font-size: 10px;
+    color: var(--accent-magenta);
+    text-align: center;
+    margin-top: 8px;
+    font-family: 'Courier New', monospace;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Cymatics Player */
+.cymatics-player {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(0, 240, 255, 0.2);
+    border-radius: 12px;
+    padding: 12px;
+    margin: 12px 0;
+    backdrop-filter: blur(10px);
+}
+
+.cymatics-track-name {
+    font-size: 11px;
+    color: #00f0ff;
+    font-family: 'Orbitron', sans-serif;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.cymatics-waveform {
+    width: 100%;
+    height: 50px;
+    border-radius: 8px;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(0, 240, 255, 0.15);
+    display: block;
+}
+
+.cymatics-timer {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.5);
+    font-family: 'Courier New', monospace;
+    text-align: center;
+    margin-top: 6px;
+    letter-spacing: 1px;
+}
+
+/* Cymatics Player – seek slider & controls */
+.cymatics-seek-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 2px;
+}
+
+.cymatics-seek-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 4px;
+    background: rgba(255,255,255,0.15);
+    outline: none;
+    cursor: pointer;
+    accent-color: #00f0ff;
+}
+
+.cymatics-seek-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #00f0ff, #ff00ff);
+    cursor: pointer;
+    box-shadow: 0 0 6px rgba(0,240,255,0.6);
+    transition: transform 0.1s;
+}
+
+.cymatics-seek-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.3);
+}
+
+.cymatics-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.cymatics-ctrl-btn {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.8);
+    font-size: 15px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, transform 0.1s, border-color 0.2s;
+}
+
+.cymatics-ctrl-btn:hover {
+    background: rgba(0,240,255,0.15);
+    border-color: rgba(0,240,255,0.5);
+    transform: scale(1.1);
+}
+
+.cymatics-play-btn {
+    width: 46px;
+    height: 46px;
+    font-size: 18px;
+    background: linear-gradient(135deg, rgba(0,240,255,0.2), rgba(255,0,255,0.2));
+    border-color: rgba(0,240,255,0.4);
+}
+
+.cymatics-play-btn:hover {
+    background: linear-gradient(135deg, rgba(0,240,255,0.35), rgba(255,0,255,0.35));
+}
