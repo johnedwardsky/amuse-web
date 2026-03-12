@@ -97,7 +97,8 @@ const INITIAL_PARAMS = {
   cymaticsFieldMode: false, // Grid/Field view
   cymaticsRainbowMode: true, // Multi-band spectral coloring
   cymaticsGhostMode: false,   // Trailing/Shadow effect
-  cymaticsOilMode: false      // Art/Oil painting effect
+  cymaticsOilMode: false,      // Art/Oil painting effect
+  cymaticsSpin: 0             // Rotation speed
 };
 
 function App() {
@@ -164,6 +165,7 @@ function App() {
   const waveformPeaksRef = useRef([]); // Pre-computed amplitude peaks for full waveform
   const waveformDraggingRef = useRef(false);
   const cymaticsEnvelopesRef = useRef(new Array(7).fill(0)); // Energy tracking for 7 bands
+  const cymaticsRotationRef = useRef(0); // For Spin effect
 
   const [cymaticsTrackName, setCymaticsTrackName] = useState(null);
   const [cymaticsDuration, setCymaticsDuration] = useState(0);
@@ -849,10 +851,19 @@ function App() {
         });
       }
 
-      const clearAlpha = curParams.cymaticsOilMode ? 0 : (curParams.cymaticsGhostMode ? 0.04 : 0.15);
-      if (clearAlpha > 0) {
+      if (curParams.cymaticsOilMode ? 0 : (curParams.cymaticsGhostMode ? 0.04 : 0.15)) {
+        const clearAlpha = curParams.cymaticsOilMode ? 0 : (curParams.cymaticsGhostMode ? 0.04 : 0.15);
         ctx.fillStyle = curParams.theme === 'noir' ? `rgba(0,0,0,${clearAlpha})` : `rgba(5,5,8,${clearAlpha})`;
         ctx.fillRect(0, 0, curSize.width, curSize.height);
+      }
+
+      // --- SPIN LOGIC ---
+      if (curParams.cymaticsSpin !== 0) {
+        cymaticsRotationRef.current += curParams.cymaticsSpin * 0.01;
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(cymaticsRotationRef.current);
+        ctx.translate(-centerX, -centerY);
       }
 
       const getChladniValForBand = (nx, ny, bandIdx) => {
@@ -975,8 +986,11 @@ function App() {
           }
         });
       }
-      
 
+      if (curParams.cymaticsSpin !== 0) {
+        ctx.restore();
+      }
+      
       // Draw STATIC waveform peaks over the full track + playhead
       if (waveformCanvasRef.current && waveformPeaksRef.current.length > 0) {
         const wfCanvas = waveformCanvasRef.current;
@@ -2668,6 +2682,10 @@ function App() {
               <div className="control-group">
                 <label>Particle Count <span>{params.cymaticsParticleCount}</span></label>
                 <input type="range" min="1000" max="30000" step="1000" value={params.cymaticsParticleCount} onChange={(e) => updateParam('cymaticsParticleCount', parseInt(e.target.value))} />
+              </div>
+              <div className="control-group">
+                <label>Spin Speed <span>{params.cymaticsSpin.toFixed(2)}</span></label>
+                <input type="range" min="-2.0" max="2.0" step="0.01" value={params.cymaticsSpin} onChange={(e) => updateParam('cymaticsSpin', parseFloat(e.target.value))} />
               </div>
             </div>
           </>
