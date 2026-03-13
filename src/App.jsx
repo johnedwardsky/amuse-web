@@ -165,6 +165,7 @@ function App() {
   const cymaticsStartTimeRef = useRef(0);
   const cymaticsOffsetRef = useRef(0);
   const cymaticsRipplesRef = useRef([]); // NEW: Beat-driven ripples
+  const cymaticsBeatThresholdsRef = useRef([0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]); // Adaptive thresholds for rhythm
   const waveformCanvasRef = useRef(null);
   const waveformPeaksRef = useRef([]); // Pre-computed amplitude peaks for full waveform
   const waveformDraggingRef = useRef(false);
@@ -861,18 +862,36 @@ function App() {
           
           cymaticsEnvelopesRef.current[idx] = env;
           
-          // Transient detection (sudden spike for rhythm)
+          // RHYTHTM/ONSET DETECTION LOGIC
           const transient = Math.max(0, rawAmp - prevEnv);
           const amp = env * r.weight * sensitivity;
           
-          // Trigger Ripple on beat
-          if (curParams.cymaticsRippleMode && transient > 0.08) {
-             cymaticsRipplesRef.current.push({
-                radius: 10,
-                speed: 5 + transient * 50,
-                alpha: 0.8 * transient * 5,
-                color: r.color
-             });
+          // Adaptive Onset Thresholding (Captures Rhythm, ignores static volume)
+          const currentThreshold = cymaticsBeatThresholdsRef.current[idx];
+          const isBeat = transient > currentThreshold && transient > 0.05;
+          
+          if (isBeat) {
+            // Found a rhythmic hit! Fire ripple and raise threshold
+            cymaticsBeatThresholdsRef.current[idx] = transient; 
+            
+            if (curParams.cymaticsRippleMode) {
+              const rippleCount = 1 + Math.floor(transient * 5); // More waves for harder hits
+              for(let i=0; i < rippleCount; i++) {
+                cymaticsRipplesRef.current.push({
+                   radius: 0,
+                   speed: (4 + transient * 30) * (1 - i * 0.2),
+                   alpha: 0.9 * transient * 4,
+                   color: r.color,
+                   thickness: 2 + transient * 10
+                });
+              }
+            }
+          } else {
+            // Decay threshold to look for the next beat
+            cymaticsBeatThresholdsRef.current[idx] *= 0.92;
+            if (cymaticsBeatThresholdsRef.current[idx] < 0.08) {
+               cymaticsBeatThresholdsRef.current[idx] = 0.08;
+            }
           }
 
           return {
@@ -951,7 +970,7 @@ function App() {
           ctx.beginPath();
           ctx.strokeStyle = r.color;
           ctx.globalAlpha = Math.min(1, r.alpha);
-          ctx.lineWidth = 1 + r.alpha * 15;
+          ctx.lineWidth = r.thickness * r.alpha;
           ctx.arc(centerX, centerY, r.radius, 0, Math.PI * 2);
           ctx.stroke();
         });
