@@ -1087,6 +1087,7 @@ function App() {
           ctx.globalAlpha = 1.0;
         }
         }
+        }
       }
 
       if (curParams.cymaticsSpin !== 0 || curParams.cymaticsCircular) {
