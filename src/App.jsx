@@ -949,10 +949,22 @@ function App() {
       const getParticleColor = (p, overrideVal) => {
         const h = bandParams[p.band] || { env: 1.0 };
         const baseVal = overrideVal !== undefined ? overrideVal : (0.4 + h.env * 0.6);
+        
         if (curParams.cymaticsRainbowMode && bandParams[p.band]) {
           return `${bandParams[p.band].color}${Math.floor(Math.min(1.0, baseVal) * 255).toString(16).padStart(2, '0')}`;
         }
-        return `rgba(255, 255, 255, ${baseVal})`;
+
+        const nx = p.x / curSize.width;
+        const ny = p.y / curSize.height;
+
+        switch (curParams.penStyle) {
+          case PEN_STYLES.RAINBOW: return `hsla(${(nx + ny) * 360 + frameCount.current}, 70%, 60%, ${baseVal})`;
+          case PEN_STYLES.BLUE: return `rgba(0, ${150 + nx * 105}, 255, ${0.4 + baseVal * 0.6})`;
+          case PEN_STYLES.GOLDEN: return `rgba(255, ${150 + ny * 105}, 0, ${0.4 + baseVal * 0.6})`;
+          case PEN_STYLES.BW: return `rgba(255, 255, 255, ${0.1 + baseVal * 0.9})`;
+          case PEN_STYLES.HOLOGRAPHIC: return `hsla(${(nx - ny) * 360}, 100%, 75%, ${0.5 * baseVal})`;
+          default: return `rgba(255, 255, 255, ${baseVal})`;
+        }
       };
 
       ctx.shadowBlur = 0;
@@ -1014,7 +1026,10 @@ function App() {
           const curJitter = curParams.cymaticsOilMode ? 0.1 : (0.3 + h.transient * 5.0);
           const pS = curParams.cymaticsOilMode ? (3 + h.env * 6) : (1.5 + h.env * 1.5);
           
-          ctx.fillStyle = getParticleColor({ band: b }, undefined);
+          const isSpectral = curParams.cymaticsRainbowMode && bandParams[b];
+          if (isSpectral) {
+            ctx.fillStyle = getParticleColor({ band: b }, undefined);
+          }
           if (curParams.cymaticsOilMode) ctx.globalAlpha = 0.3;
 
           const pGroup = cymaticsParticles.current.filter(p => b === p.band);
@@ -1048,7 +1063,6 @@ function App() {
                const dSq = dx*dx + dy*dy;
                if (dSq > rLimitSq) {
                   const dist = Math.sqrt(dSq);
-                  // Vector normalization for reflection (no atan2/cos/sin)
                   const ux = dx / dist; 
                   const uy = dy / dist;
                   p.x = centerX + ux * rLimit * 0.99;
@@ -1060,6 +1074,10 @@ function App() {
               if (p.y < 0) p.y = curSize.height; else if (p.y > curSize.height) p.y = 0;
             }
             
+            if (!isSpectral) {
+              ctx.fillStyle = getParticleColor(p);
+            }
+
             if (curParams.cymaticsOilMode) {
                ctx.beginPath(); ctx.arc(p.x, p.y, pS, 0, 6.28); ctx.fill();
             } else {
@@ -1067,6 +1085,7 @@ function App() {
             }
           });
           ctx.globalAlpha = 1.0;
+        }
         }
       }
 
