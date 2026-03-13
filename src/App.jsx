@@ -100,7 +100,8 @@ const INITIAL_PARAMS = {
   cymaticsOilMode: false,      // Art/Oil painting effect
   cymaticsSpin: 0,            // Rotation speed
   cymaticsZoom: 0,            // Flight/Zoom speed
-  cymaticsCircular: false     // Circular canvas/plate
+  cymaticsCircular: false,     // Circular canvas/plate
+  cymaticsRippleMode: true    // Rhythmic ripple waves
 };
 
 function App() {
@@ -163,6 +164,7 @@ function App() {
   const cymaticsAudioBufferRef = useRef(null);
   const cymaticsStartTimeRef = useRef(0);
   const cymaticsOffsetRef = useRef(0);
+  const cymaticsRipplesRef = useRef([]); // NEW: Beat-driven ripples
   const waveformCanvasRef = useRef(null);
   const waveformPeaksRef = useRef([]); // Pre-computed amplitude peaks for full waveform
   const waveformDraggingRef = useRef(false);
@@ -394,10 +396,6 @@ function App() {
     reverbNode.current.buffer = impulse;
 
     // Routing: Osc -> Gain -> Panner -> (Split)
-    oscillator.current.connect(gainNode.current);
-    gainNode.current.connect(panner.current);
-
-    // Direct -> Destination
     panner.current.connect(audioCtx.current.destination);
 
     // Delay Path
@@ -867,6 +865,16 @@ function App() {
           const transient = Math.max(0, rawAmp - prevEnv);
           const amp = env * r.weight * sensitivity;
           
+          // Trigger Ripple on beat
+          if (curParams.cymaticsRippleMode && transient > 0.08) {
+             cymaticsRipplesRef.current.push({
+                radius: 10,
+                speed: 5 + transient * 50,
+                alpha: 0.8 * transient * 5,
+                color: r.color
+             });
+          }
+
           return {
             n: (1 + (maxIdx % (5 + idx * 2))) + (env * 2), // Pattern morphs with volume
             m: (1 + (Math.floor(maxIdx / 4) % (4 + idx * 2))) + (env * 2),
@@ -929,6 +937,26 @@ function App() {
       };
 
       ctx.shadowBlur = 0;
+
+      // --- DRAW RIPPLES (BEAT WAVES) ---
+      if (curParams.cymaticsRippleMode && cymaticsRipplesRef.current.length > 0) {
+        ctx.save();
+        if (cymaticsRipplesRef.current.length > 40) {
+          cymaticsRipplesRef.current = cymaticsRipplesRef.current.slice(-40);
+        }
+        cymaticsRipplesRef.current = cymaticsRipplesRef.current.filter(r => r.alpha > 0.01);
+        cymaticsRipplesRef.current.forEach(r => {
+          r.radius += r.speed;
+          r.alpha *= 0.94;
+          ctx.beginPath();
+          ctx.strokeStyle = r.color;
+          ctx.globalAlpha = Math.min(1, r.alpha);
+          ctx.lineWidth = 1 + r.alpha * 15;
+          ctx.arc(centerX, centerY, r.radius, 0, Math.PI * 2);
+          ctx.stroke();
+        });
+        ctx.restore();
+      }
 
       if (curParams.cymaticsFieldMode) {
         // --- FIELD MODE: Geometric Grid ---
@@ -2700,6 +2728,13 @@ function App() {
                   style={{ fontSize: '10px' }}
                 >
                   {params.cymaticsCircular ? '⚪ Circle ON' : '⬜ Circle OFF'}
+                </button>
+                <button 
+                  className={params.cymaticsRippleMode ? 'active' : ''}
+                  onClick={() => updateParam('cymaticsRippleMode', !params.cymaticsRippleMode)}
+                  style={{ fontSize: '10px' }}
+                >
+                  {params.cymaticsRippleMode ? '🔘 Ripple Waves ON' : '🔘 Ripple Waves OFF'}
                 </button>
                 <button 
                   onClick={handleCymaticsShuffle}
